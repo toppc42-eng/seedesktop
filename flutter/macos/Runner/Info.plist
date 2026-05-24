@@ -28,9 +28,10 @@
 			<key>CFBundleURLIconFile</key>
 			<string></string>
 			<key>CFBundleURLName</key>
-			<string>com.carriez.rustdesk</string>
+			<string>com.seedesktop.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>seedesktop</string>
 				<string>rustdesk</string>
 			</array>
 		</dict>

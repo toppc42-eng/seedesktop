@@ -6,7 +6,7 @@
         <string>com.carriez.RustDesk_server</string>
 
 	<key>AssociatedBundleIdentifiers</key>
-	<string>com.carriez.rustdesk</string>
+	<string>com.seedesktop.app</string>
     
         <key>LimitLoadToSessionType</key>
         <array>

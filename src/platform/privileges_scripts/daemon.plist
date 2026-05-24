@@ -6,7 +6,7 @@
         <string>com.carriez.RustDesk_service</string>
 
 	<key>AssociatedBundleIdentifiers</key>
-	<string>com.carriez.rustdesk</string>
+	<string>com.seedesktop.app</string>
     
         <key>KeepAlive</key>
         <true/>

@@ -99,6 +99,36 @@ def apply_custom_branding_linux_icons():
         # flat PNG fallback for scalable slot
         shutil.copy2(app_png, Path("res/scalable.svg"))
 
+def apply_custom_branding_macos_icons():
+    """Copy macOS AppIcon.icns from custom branding PNG when available (Darwin only)."""
+    if sys.platform != "darwin":
+        return
+    branding_dir = Path("custom_branding")
+    app_png = branding_dir / "app_icon.png"
+    if not app_png.exists():
+        return
+    iconset = Path("build/macos_icon.iconset")
+    icns_out = Path("flutter/macos/Runner/AppIcon.icns")
+    if iconset.exists():
+        shutil.rmtree(iconset)
+    iconset.mkdir(parents=True)
+    sizes = [
+        (16, "icon_16x16.png"),
+        (32, "icon_16x16@2x.png"),
+        (32, "icon_32x32.png"),
+        (64, "icon_32x32@2x.png"),
+        (128, "icon_128x128.png"),
+        (256, "icon_128x128@2x.png"),
+        (256, "icon_256x256.png"),
+        (512, "icon_256x256@2x.png"),
+        (512, "icon_512x512.png"),
+        (1024, "icon_512x512@2x.png"),
+    ]
+    for px, name in sizes:
+        system2(f'sips -z {px} {px} "{app_png}" --out "{iconset / name}"')
+    system2(f'iconutil -c icns "{iconset}" -o "{icns_out}"')
+    shutil.rmtree(iconset)
+
 
 def linux_deb_output_name(version: str) -> str:
     return f"SeeDesktop-{version}-{get_deb_arch()}.deb"
@@ -456,6 +486,7 @@ def _macos_sign_dmg(dmg_path: str, identity: str) -> None:
 
 
 def build_flutter_dmg(version, features):
+    apply_custom_branding_macos_icons()
     if not skip_cargo:
         # set minimum osx build target, now is 10.14, which is the same as the flutter xcode project
         system2(

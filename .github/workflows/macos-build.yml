@@ -1,4 +1,4 @@
-name: Build macOS Installer
+name: SeeDesktop macOS Build
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
       ref:
         description: "Branch or tag to build"
         required: false
-        default: "master"
+        default: "main"
       publish_gcs:
         description: "Upload DMG + version.json to GCS (needs SEEDESKTOP_GCS_CREDENTIALS_JSON secret)"
         required: false
@@ -15,6 +15,17 @@ on:
         options:
           - "false"
           - "true"
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'flutter/**'
+      - 'libs/**'
+      - 'build.py'
+      - 'res/**'
+      - 'Cargo.toml'
+      - '.github/workflows/macos-build.yml'
 
 permissions:
   contents: read
@@ -58,6 +69,7 @@ jobs:
       - name: Flutter dependencies
         run: |
           cd flutter
+          sed -i '' -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' pubspec.yaml || sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' pubspec.yaml
           flutter pub get
 
       # bridge_generated*.rs are gitignored; must match flutter_rust_bridge 1.80.1 (see src/bridge_generated.rs header).
