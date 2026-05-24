@@ -28,6 +28,11 @@ skip_cargo = False
 # Flutter macOS output bundle; must match PRODUCT_NAME in flutter/macos/Runner/Configs/AppInfo.xcconfig
 MACOS_FLUTTER_APP = "SeeDesktop.app"
 
+# Linux .deb / desktop integration (SeeDesktop branding)
+LINUX_PKG_NAME = "seedesktop"
+LINUX_BINARY = "seedesktop"
+LINUX_DISPLAY_NAME = "SeeDesktop"
+
 
 def get_deb_arch() -> str:
     custom_arch = os.environ.get("DEB_ARCH")
@@ -75,6 +80,70 @@ def apply_custom_branding_windows_icons():
         shutil.copy2(tray_icon, "flutter/assets/new_tray.ico")
         shutil.copy2(tray_icon, "flutter/assets/see-desktop-tray.ico")
         shutil.copy2(tray_icon, "res/new_tray.ico")
+
+
+def apply_custom_branding_linux_icons():
+    """Copy Linux menu icons into res/ when custom PNG/SVG branding exists."""
+    branding_dir = Path("custom_branding")
+    if not branding_dir.exists():
+        return
+    Path("res").mkdir(parents=True, exist_ok=True)
+    app_png = branding_dir / "app_icon.png"
+    app_svg = branding_dir / "app_icon.svg"
+    if app_png.exists():
+        for size in ("32x32", "64x64", "128x128", "128x128@2x"):
+            shutil.copy2(app_png, Path(f"res/{size}.png"))
+    if app_svg.exists():
+        shutil.copy2(app_svg, Path("res/scalable.svg"))
+    elif app_png.exists():
+        # flat PNG fallback for scalable slot
+        shutil.copy2(app_png, Path("res/scalable.svg"))
+
+
+def linux_deb_output_name(version: str) -> str:
+    return f"SeeDesktop-{version}-{get_deb_arch()}.deb"
+
+
+def stage_linux_flutter_deb(version: str, bundle_source: str):
+    """Stage tmpdeb/ for a Flutter Linux bundle under usr/share/seedesktop."""
+    share = f"tmpdeb/usr/share/{LINUX_PKG_NAME}"
+    system2('mkdir -p tmpdeb/usr/bin/')
+    system2(f'mkdir -p {share}')
+    system2(f'mkdir -p tmpdeb/etc/{LINUX_PKG_NAME}/')
+    system2('mkdir -p tmpdeb/etc/pam.d/')
+    system2(f'mkdir -p {share}/files/systemd/')
+    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
+    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
+    system2('mkdir -p tmpdeb/usr/share/applications/')
+    system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
+    system2(f'rm tmpdeb/usr/bin/{LINUX_BINARY} || true')
+    system2(f'cp -r {bundle_source}/* {share}/')
+    system2(
+        f'cp ../res/{LINUX_PKG_NAME}.service {share}/files/systemd/')
+    system2(
+        f'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/{LINUX_PKG_NAME}.png')
+    system2(
+        f'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/{LINUX_PKG_NAME}.svg')
+    system2(
+        f'cp ../res/{LINUX_PKG_NAME}.desktop tmpdeb/usr/share/applications/{LINUX_PKG_NAME}.desktop')
+    system2(
+        f'cp ../res/{LINUX_PKG_NAME}-link.desktop tmpdeb/usr/share/applications/{LINUX_PKG_NAME}-link.desktop')
+    system2(
+        f'cp ../res/startwm.sh tmpdeb/etc/{LINUX_PKG_NAME}/')
+    system2(
+        f'cp ../res/xorg.conf tmpdeb/etc/{LINUX_PKG_NAME}/')
+    system2(
+        f'cp ../res/pam.d/rustdesk.debian tmpdeb/etc/pam.d/{LINUX_PKG_NAME}')
+    system2(
+        f"echo \"#!/bin/sh\" >> {share}/files/polkit && chmod a+x {share}/files/polkit")
+    system2('mkdir -p tmpdeb/DEBIAN')
+    generate_control_file(version)
+    system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
+    md5_file_folder("tmpdeb/")
+    system2('dpkg-deb -b tmpdeb seedesktop.deb;')
+    system2('/bin/rm -rf tmpdeb/')
+    system2('/bin/rm -rf ../res/DEBIAN/control')
+    os.rename('seedesktop.deb', f'../{linux_deb_output_name(version)}')
 
 
 def get_version():
@@ -324,18 +393,18 @@ def generate_control_file(version):
     control_file_path = "../res/DEBIAN/control"
     system2('/bin/rm -rf %s' % control_file_path)
 
-    content = """Package: rustdesk
+    content = """Package: %s
 Section: net
 Priority: optional
 Version: %s
 Architecture: %s
-Maintainer: rustdesk <info@rustdesk.com>
-Homepage: https://rustdesk.com
+Maintainer: SeeDesktop <toppc42@gmail.com>
+Homepage: https://github.com/toppc42-eng/seedesktop
 Depends: libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libgstreamer-plugins-base1.0-0, libpam0g, gstreamer1.0-pipewire%s
 Recommends: libayatana-appindicator3-1
-Description: A remote control software.
+Description: SeeDesktop remote desktop software.
 
-""" % (version, get_deb_arch(), get_deb_extra_depends())
+""" % (LINUX_PKG_NAME, version, get_deb_arch(), get_deb_extra_depends())
     file = open(control_file_path, "w")
     file.write(content)
     file.close()
@@ -351,85 +420,17 @@ def build_flutter_deb(version, features):
     if not skip_cargo:
         system2(f'cargo build --features {features} --lib --release')
         ffi_bindgen_function_refactor()
+    apply_custom_branding_linux_icons()
     os.chdir('flutter')
     system2('flutter build linux --release')
-    system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/share/rustdesk')
-    system2('mkdir -p tmpdeb/etc/rustdesk/')
-    system2('mkdir -p tmpdeb/etc/pam.d/')
-    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
-    system2('mkdir -p tmpdeb/usr/share/applications/')
-    system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/rustdesk || true')
-    system2(
-        f'cp -r {flutter_build_dir}/* tmpdeb/usr/share/rustdesk/')
-    system2(
-        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
-    system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
-    system2(
-        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
-    system2(
-        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
-    system2(
-        'cp ../res/startwm.sh tmpdeb/etc/rustdesk/')
-    system2(
-        'cp ../res/xorg.conf tmpdeb/etc/rustdesk/')
-    system2(
-        'cp ../res/pam.d/rustdesk.debian tmpdeb/etc/pam.d/rustdesk')
-    system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
-
-    system2('mkdir -p tmpdeb/DEBIAN')
-    generate_control_file(version)
-    system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
-    md5_file_folder("tmpdeb/")
-    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
-
-    system2('/bin/rm -rf tmpdeb/')
-    system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
+    stage_linux_flutter_deb(version, flutter_build_dir)
     os.chdir("..")
 
 
 def build_deb_from_folder(version, binary_folder):
+    apply_custom_branding_linux_icons()
     os.chdir('flutter')
-    system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/share/rustdesk')
-    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
-    system2('mkdir -p tmpdeb/usr/share/applications/')
-    system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/rustdesk || true')
-    system2(
-        f'cp -r ../{binary_folder}/* tmpdeb/usr/share/rustdesk/')
-    system2(
-        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
-    system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
-    system2(
-        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
-    system2(
-        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
-    system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
-
-    system2('mkdir -p tmpdeb/DEBIAN')
-    generate_control_file(version)
-    system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
-    md5_file_folder("tmpdeb/")
-    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
-
-    system2('/bin/rm -rf tmpdeb/')
-    system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
+    stage_linux_flutter_deb(version, f'../{binary_folder}')
     os.chdir("..")
 
 
@@ -658,8 +659,7 @@ def main():
                 build_flutter_dmg(version, features)
                 pass
             else:
-                # system2(
-                #     'mv target/release/bundle/deb/rustdesk*.deb ./flutter/rustdesk.deb')
+                apply_custom_branding_linux_icons()
                 build_flutter_deb(version, features)
         else:
             system2('cargo bundle --release --features ' + features)

@@ -1,0 +1,19 @@
+[Desktop Entry]
+Name=SeeDesktop
+GenericName=Remote Desktop
+Comment=SeeDesktop Remote Desktop
+Exec=seedesktop %u
+Icon=seedesktop
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Network;RemoteAccess;GTK;
+Keywords=internet;linux;dart;rust;remote-control;p2p;remote-desktop;vnc;seedesktop;
+Actions=new-window;
+StartupWMClass=seedesktop
+
+X-Desktop-File-Install-Version=0.23
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=seedesktop %u
