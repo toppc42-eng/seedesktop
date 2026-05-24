@@ -1,0 +1,140 @@
+name: Build macOS Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to build"
+        required: false
+        default: "master"
+      publish_gcs:
+        description: "Upload DMG + version.json to GCS (needs SEEDESKTOP_GCS_CREDENTIALS_JSON secret)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    # Intel x86_64 binary (runs on Intel Macs / VMs). macos-14/arm64 produces arm64-only apps.
+    # GitHub retired macos-13; macos-15-intel is the supported Intel image (see github.blog changelog).
+    runs-on: macos-15-intel
+    timeout-minutes: 120
+    env:
+      # Must match vcpkg.json "baseline" / project CI (see .github/workflows/flutter-build.yml)
+      VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      # Pin Flutter: latest stable breaks this tree (extended_text / theme APIs / google_fonts).
+      FLUTTER_VERSION: "3.24.5"
+
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v8
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter dependencies
+        run: |
+          cd flutter
+          flutter pub get
+
+      # bridge_generated*.rs are gitignored; must match flutter_rust_bridge 1.80.1 (see src/bridge_generated.rs header).
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid --locked
+
+      - name: Generate Flutter Rust bridge
+        run: |
+          set -euxo pipefail
+          "$HOME/.cargo/bin/flutter_rust_bridge_codegen" \
+            --rust-input ./src/flutter_ffi.rs \
+            --dart-output ./flutter/lib/generated_bridge.dart \
+            --c-output ./flutter/macos/Runner/bridge_generated.h
+          cp ./flutter/macos/Runner/bridge_generated.h ./flutter/ios/Runner/bridge_generated.h
+
+      # Upstream RustDesk mac CI: Homebrew tools + NASM 2.x + vcpkg (libyuv/libvpx/aom/opus/ffmpeg… via manifest).
+      - name: Install build prerequisites (Homebrew)
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install llvm create-dmg cmake ninja
+          if command -v pkg-config &>/dev/null; then
+            echo "pkg-config already present"
+          else
+            brew install pkg-config
+          fi
+          brew install opus
+
+      - name: Install NASM 2.16 (required by vcpkg aom/libvpx)
+        run: |
+          set -euxo pipefail
+          curl -fLO https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
+          unzip -o nasm-2.16.03-macosx.zip
+          sudo cp nasm-2.16.03/nasm /usr/local/bin/nasm
+          nasm --version
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies (manifest)
+        run: |
+          set -euxo pipefail
+          if ! "$VCPKG_ROOT/vcpkg" install --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"
+              echo "======"
+              cat "$_1"
+              echo "======"
+            done
+            exit 1
+          fi
+
+      - name: Build macOS release (app + DMG via build.py)
+        run: python3 build.py --flutter
+
+      - name: Publish DMG to GCS
+        if: inputs.publish_gcs == 'true'
+        env:
+          SEEDESKTOP_GCS_CREDENTIALS: credentials.json
+        run: |
+          set -euxo pipefail
+          if [ -z "${{ secrets.SEEDESKTOP_GCS_CREDENTIALS_JSON }}" ]; then
+            echo "SEEDESKTOP_GCS_CREDENTIALS_JSON secret is not configured."
+            exit 1
+          fi
+          printf '%s' "${{ secrets.SEEDESKTOP_GCS_CREDENTIALS_JSON }}" > credentials.json
+          python3 -m pip install -q google-cloud-storage
+          python3 publish_update_mac.py
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-installer
+          path: |
+            SeeDesktop-*-macOS.dmg
+            flutter/build/macos/Build/Products/Release/SeeDesktop.app
+          if-no-files-found: error

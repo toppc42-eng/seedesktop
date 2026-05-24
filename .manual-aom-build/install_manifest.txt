@@ -1,0 +1,16 @@
+C:/seedesktop/see-desk/$inst/lib/cmake/AOM/AOMConfig.cmake
+C:/seedesktop/see-desk/$inst/lib/cmake/AOM/AOMConfigVersion.cmake
+C:/seedesktop/see-desk/$inst/lib/cmake/AOM/AOMTargets.cmake
+C:/seedesktop/see-desk/$inst/lib/cmake/AOM/AOMTargets-release.cmake
+C:/seedesktop/see-desk/$inst/include/aom/aom.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_codec.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_frame_buffer.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_image.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_integer.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_decoder.h
+C:/seedesktop/see-desk/$inst/include/aom/aomdx.h
+C:/seedesktop/see-desk/$inst/include/aom/aomcx.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_encoder.h
+C:/seedesktop/see-desk/$inst/include/aom/aom_external_partition.h
+C:/seedesktop/see-desk/$inst/lib/pkgconfig/aom.pc
+C:/seedesktop/see-desk/$inst/lib/libaom.a

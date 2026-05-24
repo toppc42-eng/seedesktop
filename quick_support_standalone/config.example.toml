@@ -1,0 +1,11 @@
+# העתיקו ל-config.toml ליד ההפעלה (או ליד ה-exe לאחר בנייה).
+
+# בסיס HTTPS ל-API מהיר שהשרת שלכם חושף (ללא לוכסן בסוף).
+# דוגמה: https://support.example.com/api/v1
+api_base_url = "https://YOUR_SERVER_HERE/quick-support"
+
+# אופציונלי: Bearer לבקשות (אם השרת דורש)
+# api_token = "your-secret-token"
+
+# כמה שניות להמתין לכל בקשת HTTP (התחברות איטית ברשת לקוח)
+request_timeout_secs = 25

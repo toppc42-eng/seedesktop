@@ -1,0 +1,11 @@
+C:\seedesktop\see-desk\quick_support_standalone\target\release\deps\tokio_rustls-e7fe260ac8cbc292.d: C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\lib.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\client.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\mod.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\handshake.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\server.rs
+
+C:\seedesktop\see-desk\quick_support_standalone\target\release\deps\libtokio_rustls-e7fe260ac8cbc292.rlib: C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\lib.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\client.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\mod.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\handshake.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\server.rs
+
+C:\seedesktop\see-desk\quick_support_standalone\target\release\deps\libtokio_rustls-e7fe260ac8cbc292.rmeta: C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\lib.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\client.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\mod.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\handshake.rs C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\server.rs
+
+C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\lib.rs:
+C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\client.rs:
+C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\mod.rs:
+C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\common\handshake.rs:
+C:\Users\eli\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tokio-rustls-0.24.1\src\server.rs:
