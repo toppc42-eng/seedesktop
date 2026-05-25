@@ -527,6 +527,9 @@ class _RemotePageState extends State<RemotePage>
       } else {
         await _popRemoteScreenAfterDisconnect(onCloseSession: onCloseSession);
       }
+    } catch (e, st) {
+      debugPrint('requestCloseSession failed: $e\n$st');
+      await _popRemoteScreenAfterDisconnect(onCloseSession: onCloseSession);
     } finally {
       _crmCloseFlowActive = false;
     }
@@ -546,7 +549,13 @@ class _RemotePageState extends State<RemotePage>
           id: widget.id,
           ffi: _ffi,
           state: widget.toolbarState,
-          onCloseRequested: requestCloseSession,
+          onCloseRequested: () => requestCloseSession(
+            onCloseSession: widget.tabController == null
+                ? null
+                : () {
+                    widget.tabController!.closeBy(widget.id);
+                  },
+          ),
           onEnterOrLeaveImageSetter: (id, func) {
             _instanceIdOnEnterOrLeaveImage4Toolbar = id;
             _onEnterOrLeaveImage4Toolbar = func;

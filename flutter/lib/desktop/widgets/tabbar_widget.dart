@@ -858,6 +858,8 @@ class WindowActionPanelState extends State<WindowActionPanel> {
                       Future.delayed(Duration.zero, () async {
                         if (widget.isMainWindow) {
                           await windowManager.close();
+                        } else if (isLinux) {
+                          await hideDesktopSubWindow(kWindowId!);
                         } else {
                           await WindowController.fromWindowId(kWindowId!)
                               .close();

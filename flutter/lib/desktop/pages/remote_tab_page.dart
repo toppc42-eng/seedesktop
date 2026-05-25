@@ -372,23 +372,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
       // Workaround for Windows:
       // If you click other buttons and close in msgbox within a very short period of time, the close may fail.
       // `await WindowController.fromWindowId(windowId()).close();`.
-      Future<void> loopCloseWindow() async {
-        int c = 0;
-        final windowController = WindowController.fromWindowId(windowId());
-        while (c < 20 && tabController.state.value.tabs.isEmpty) {
-          try {
-            if (await windowController.isHidden()) break;
-            await windowController.close();
-          } catch (e) {
-            debugPrint('loopCloseWindow: $e');
-            break;
-          }
-          await Future.delayed(Duration(milliseconds: 100));
-          c++;
-        }
-      }
-
-      loopCloseWindow();
+      unawaited(hideDesktopSubWindow(windowId()));
     }
     ConnectionTypeState.delete(id);
     // Clean up relative mouse mode state for this peer.

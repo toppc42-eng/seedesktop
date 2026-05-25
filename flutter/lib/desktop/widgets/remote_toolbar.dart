@@ -2334,14 +2334,14 @@ class _CloseMenu extends StatelessWidget {
       assetName: 'assets/close.svg',
       tooltip: 'Close',
       onPressed: () async {
-        if (onCloseRequested != null) {
-          await onCloseRequested!();
-          return;
-        }
         if (await showConnEndAuditDialogCloseCanceled(ffi: ffi)) {
           return;
         }
         _exitFullscreenIfNeeded();
+        if (onCloseRequested != null) {
+          await onCloseRequested!();
+          return;
+        }
         closeConnection(id: id);
       },
       color: _ToolbarTheme.redColor,

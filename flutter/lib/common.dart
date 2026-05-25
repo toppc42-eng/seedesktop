@@ -725,7 +725,7 @@ String formatDurationToTime(Duration duration) {
   return "${totalTime.toString().padLeft(2, "0")}:${mins.toString().padLeft(2, "0")}:${secs.toString().padLeft(2, "0")}";
 }
 
-closeConnection({String? id}) {
+void closeConnection({String? id}) {
   if (isAndroid || isIOS) {
     () async {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
@@ -734,13 +734,49 @@ closeConnection({String? id}) {
       Navigator.popUntil(globalKey.currentContext!, ModalRoute.withName("/"));
       stateGlobal.isInMainPage = true;
     }();
+  } else if (isWeb) {
+    Navigator.popUntil(globalKey.currentContext!, ModalRoute.withName("/"));
+    stateGlobal.isInMainPage = true;
+  } else if (desktopType == DesktopType.remote && id != null) {
+    final controller = Get.find<DesktopTabController>();
+    final page = controller.widget(id);
+    if (page is desktop_remote.RemotePage) {
+      unawaited(page.requestCloseSession(
+        onCloseSession: () => controller.closeBy(id),
+      ));
+      return;
+    }
+    controller.closeBy(id);
   } else {
-    if (isWeb) {
-      Navigator.popUntil(globalKey.currentContext!, ModalRoute.withName("/"));
-      stateGlobal.isInMainPage = true;
-    } else {
-      final controller = Get.find<DesktopTabController>();
-      controller.closeBy(id);
+    Get.find<DesktopTabController>().closeBy(id);
+  }
+}
+
+/// Linux sub-windows: [WindowController.close] often throws MissingPluginException; hide works.
+Future<void> hideDesktopSubWindow(int windowId) async {
+  if (!isDesktop) return;
+  final wc = WindowController.fromWindowId(windowId);
+  try {
+    await wc.hide();
+  } catch (e) {
+    debugPrint('hideDesktopSubWindow hide: $e');
+  }
+  try {
+    await rustDeskWinManager.unregisterActiveWindow(windowId);
+  } catch (e) {
+    try {
+      await rustDeskWinManager.call(
+          WindowType.Main, kWindowEventHide, {"id": windowId});
+    } catch (e2) {
+      debugPrint('hideDesktopSubWindow unregister: $e2');
+    }
+  }
+  if (!isLinux) {
+    try {
+      await wc.setPreventClose(false);
+      await wc.close();
+    } catch (e) {
+      debugPrint('hideDesktopSubWindow close: $e');
     }
   }
 }
