@@ -6,7 +6,7 @@ edition = "2021"
 build= "build.rs"
 description = "RustDesk Remote Desktop"
 default-run = "rustdesk"
-rust-version = "1.75"
+rust-version = "1.81"
 
 [lib]
 name = "librustdesk"
@@ -208,6 +208,9 @@ android-wakelock = { git = "https://github.com/rustdesk-org/android-wakelock" }
 [workspace]
 members = ["libs/scrap", "libs/hbb_common", "libs/enigo", "libs/clipboard", "libs/virtual_display", "libs/virtual_display/dylib", "libs/portable", "libs/remote_printer", "libs/seedesktop_backup_helper"]
 exclude = ["vdi/host", "examples/custom_plugin"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(cargo-clippy)"] }
 
 # Patch libxdo-sys to use a stub implementation that doesn't require libxdo
 # This allows building and running on systems without libxdo installed (e.g., Wayland-only)

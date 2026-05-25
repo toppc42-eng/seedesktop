@@ -42,6 +42,8 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
       # Pin Flutter: latest stable breaks this tree (extended_text / theme APIs / google_fonts).
       FLUTTER_VERSION: "3.24.5"
+      # cpal/cidre on macOS needs >= 1.81 (see flutter-build.yml MAC_RUST_VERSION).
+      RUST_VERSION: "1.81"
 
     steps:
       - name: Export GitHub Actions cache environment variables
@@ -64,7 +66,21 @@ jobs:
           cache: true
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: macos-build
+
+      - name: Patch Flutter (dropdown filter)
+        run: |
+          cd "$(dirname "$(dirname "$(which flutter)")")"
+          if [[ "${{ env.FLUTTER_VERSION }}" == "3.24.5" ]]; then
+            git apply "${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff" || true
+          fi
 
       - name: Flutter dependencies
         run: |
@@ -126,7 +142,11 @@ jobs:
           fi
 
       - name: Build macOS release (app + DMG via build.py)
-        run: python3 build.py --flutter
+        env:
+          # Avoid GNU strip from Homebrew llvm breaking release builds (rust-lang/rust#122641).
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin:${{ env.PATH }}
+          CARGO_PROFILE_RELEASE_STRIP: "false"
+        run: python3 build.py --flutter --screencapturekit
 
       - name: Publish DMG to GCS
         if: inputs.publish_gcs == 'true'
