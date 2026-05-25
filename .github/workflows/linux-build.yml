@@ -113,7 +113,7 @@ jobs:
           VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         run: |
           chmod +x scripts/build_linux.sh
-          ./scripts/build_linux.sh --release
+          ./scripts/build_linux.sh
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
