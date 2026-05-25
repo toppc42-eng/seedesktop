@@ -7,6 +7,10 @@ cd "$ROOT"
 
 export DEB_ARCH="${DEB_ARCH:-amd64}"
 
+if [[ -z "${VCPKG_ROOT:-}" && -d "${ROOT}/vcpkg" ]]; then
+  export VCPKG_ROOT="${ROOT}/vcpkg"
+fi
+
 echo "==> SeeDesktop Linux build (arch=$DEB_ARCH)"
 echo "    Requires: Rust, Flutter, vcpkg (VCPKG_ROOT), build deps from .github/workflows/bridge.yml"
 

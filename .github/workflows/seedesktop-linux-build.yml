@@ -115,6 +115,16 @@ jobs:
           name: bridge-artifact
           path: .
 
+      - name: Verify bridge artifacts
+        run: |
+          set -euxo pipefail
+          test -f src/bridge_generated.rs
+          test -f flutter/lib/generated_bridge.dart
+          test -f flutter/macos/Runner/bridge_generated.h
+          # FRB 1.80.1 + Dart 3.22 expect Uint8 for bool FFI (applied again in build.py).
+          sed -i 's/ffi.NativeFunction<ffi.Bool Function(DartPort/ffi.NativeFunction<ffi.Uint8 Function(DartPort/g' \
+            flutter/lib/generated_bridge.dart
+
       - name: Disable extra Rust lib targets (CI speed)
         run: |
           sed -i 's/\["cdylib", "staticlib", "rlib"\]/["cdylib"]/g' Cargo.toml
@@ -142,9 +152,14 @@ jobs:
       - name: Patch Flutter deps and fetch packages
         run: |
           set -euxo pipefail
+          flutter config --enable-linux-desktop
           cd flutter
           sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' pubspec.yaml
           flutter pub get
+          # Fail fast on Dart/Flutter API mismatches before the long Rust + vcpkg build.
+          flutter analyze --no-fatal-infos --no-fatal-warnings \
+            lib/desktop/pages/remote_page.dart \
+            lib/common/widgets/crm_widgets.dart
 
       - name: Build SeeDesktop .deb
         env:
