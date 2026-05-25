@@ -209,9 +209,6 @@ android-wakelock = { git = "https://github.com/rustdesk-org/android-wakelock" }
 members = ["libs/scrap", "libs/hbb_common", "libs/enigo", "libs/clipboard", "libs/virtual_display", "libs/virtual_display/dylib", "libs/portable", "libs/remote_printer", "libs/seedesktop_backup_helper"]
 exclude = ["vdi/host", "examples/custom_plugin"]
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(cargo-clippy)"] }
-
 # Patch libxdo-sys to use a stub implementation that doesn't require libxdo
 # This allows building and running on systems without libxdo installed (e.g., Wayland-only)
 [patch.crates-io]
