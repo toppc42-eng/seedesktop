@@ -236,6 +236,10 @@ def stage_linux_flutter_deb(version: str, bundle_source: str):
     system2('mkdir -p tmpdeb/DEBIAN')
     generate_control_file(version)
     system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
+    for maint in ('preinst', 'postinst', 'prerm', 'postrm'):
+        script = Path(f'tmpdeb/DEBIAN/{maint}')
+        if script.is_file():
+            script.chmod(0o755)
     md5_file_folder("tmpdeb/")
     system2('dpkg-deb -b tmpdeb seedesktop.deb;')
     system2('/bin/rm -rf tmpdeb/')
