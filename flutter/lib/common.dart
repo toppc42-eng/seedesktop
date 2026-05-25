@@ -758,13 +758,24 @@ Future<void> hideDesktopSubWindow(int windowId) async {
 
   Future<void> closeOnMainEngine() async {
     final wc = WindowController.fromWindowId(windowId);
-    try {
-      await wc.setPreventClose(false);
-      await wc.hide();
-      await wc.close();
-    } catch (e) {
-      debugPrint('hideDesktopSubWindow closeOnMainEngine: $e');
+    for (var attempt = 0; attempt < 15; attempt++) {
+      try {
+        await wc.setPreventClose(false);
+        await wc.close();
+      } catch (e) {
+        debugPrint('hideDesktopSubWindow close attempt $attempt: $e');
+      }
+      try {
+        if (await wc.isHidden()) break;
+        await wc.hide();
+      } catch (e) {
+        debugPrint('hideDesktopSubWindow hide attempt $attempt: $e');
+      }
+      if (attempt < 14) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
     }
+    rustDeskWinManager.releaseSubWindow(windowId);
     try {
       await rustDeskWinManager.unregisterActiveWindow(windowId);
     } catch (e) {
@@ -3027,16 +3038,24 @@ Future<void> onActiveWindowChanged() async {
         "[MultiWindowHandler] active window changed: ${rustDeskWinManager.getActiveWindows()}");
   }
   if (rustDeskWinManager.getActiveWindows().isEmpty) {
+    // Linux: remote sessions are independent — close orphan sub-windows but keep
+    // the main app running (do not quit when only a session window was closed).
+    if (isLinux) {
+      try {
+        await rustDeskWinManager.closeAllSubWindows();
+      } catch (err) {
+        debugPrintStack(label: "$err");
+      }
+      try {
+        if (await windowManager.isVisible()) {
+          await rustDeskWinManager.registerActiveWindow(kWindowMainId);
+        }
+      } catch (_) {}
+      return;
+    }
     // close all sub windows
     try {
-      if (isLinux) {
-        await Future.wait([
-          saveWindowPosition(WindowType.Main),
-          rustDeskWinManager.closeAllSubWindows()
-        ]);
-      } else {
-        await rustDeskWinManager.closeAllSubWindows();
-      }
+      await rustDeskWinManager.closeAllSubWindows();
     } catch (err) {
       debugPrintStack(label: "$err");
     } finally {

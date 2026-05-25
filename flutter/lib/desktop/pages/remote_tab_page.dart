@@ -373,10 +373,29 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
     if (tabController.state.value.tabs.isEmpty) {
       // Keep calling until the window status is hidden.
       //
-      // Workaround for Windows:
+      // Workaround for Windows/Linux:
       // If you click other buttons and close in msgbox within a very short period of time, the close may fail.
-      // `await WindowController.fromWindowId(windowId()).close();`.
-      unawaited(hideDesktopSubWindow(windowId()));
+      Future<void> loopCloseWindow() async {
+        var c = 0;
+        final wid = windowId();
+        while (c < 20 && tabController.state.value.tabs.isEmpty) {
+          await hideDesktopSubWindow(wid);
+          if (!isLinux) {
+            break;
+          }
+          try {
+            if (await WindowController.fromWindowId(wid).isHidden()) {
+              break;
+            }
+          } catch (_) {
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 100));
+          c++;
+        }
+      }
+
+      unawaited(loopCloseWindow());
     }
     ConnectionTypeState.delete(id);
     // Clean up relative mouse mode state for this peer.

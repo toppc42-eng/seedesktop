@@ -426,6 +426,17 @@ class RustDeskMultiWindowManager {
     return [];
   }
 
+  /// Drop tracking for a closed/hidden sub-window without clearing other windows of the same type.
+  void releaseSubWindow(int windowId) {
+    _activeWindows.remove(windowId);
+    _inactiveWindows.remove(windowId);
+    _remoteDesktopWindows.remove(windowId);
+    _fileTransferWindows.remove(windowId);
+    _viewCameraWindows.remove(windowId);
+    _portForwardWindows.remove(windowId);
+    _terminalWindows.remove(windowId);
+  }
+
   void clearWindowType(WindowType type) {
     switch (type) {
       case WindowType.Main:
@@ -493,10 +504,10 @@ class RustDeskMultiWindowManager {
           await WindowController.fromWindowId(wId).setPreventClose(false);
           await WindowController.fromWindowId(wId).close();
         }
-        _activeWindows.remove(wId);
       } catch (e) {
-        debugPrint("$e");
-        return;
+        debugPrint("close window $wId: $e");
+      } finally {
+        releaseSubWindow(wId);
       }
     }
     clearWindowType(type);
