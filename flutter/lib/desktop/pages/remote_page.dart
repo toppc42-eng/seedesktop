@@ -664,7 +664,7 @@ class _RemotePageState extends State<RemotePage>
     super.build(context);
     return PopScope(
         canPop: false,
-        onPopInvokedWithResult: (didPop, result) {
+        onPopInvoked: (didPop) {
           if (didPop) return;
           unawaited(requestCloseSession());
         },

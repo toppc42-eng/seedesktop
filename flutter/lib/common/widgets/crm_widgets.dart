@@ -147,7 +147,7 @@ Future<void> showCrmNoteDialog({
     builder: (dialogContext) => StatefulBuilder(
       builder: (ctx, setState) => PopScope(
         canPop: false,
-        onPopInvokedWithResult: (didPop, result) async {
+        onPopInvoked: (didPop) async {
           if (didPop || saving) return;
           await dismissDialog(dialogContext);
         },
