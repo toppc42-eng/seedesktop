@@ -149,17 +149,8 @@ class PeerTabModel with ChangeNotifier {
   /// macOS / Linux: only Recent + Favorites in the top bar (no RMM / cloud / LAN tabs).
   void _applyConnectClientOnlyTabVisibility() {
     if (!isDesktopConnectClientOnly) return;
-    const hidden = <int>[
-      PeerTabIndex.cloudContacts.index,
-      PeerTabIndex.lan.index,
-      PeerTabIndex.health.index,
-      PeerTabIndex.ab.index,
-      PeerTabIndex.group.index,
-      PeerTabIndex.myDevices.index,
-      PeerTabIndex.scriptManager.index,
-      PeerTabIndex.localMaintenance.index,
-      PeerTabIndex.secureTransfer.index,
-    ];
+    // Indices must match [PeerTabIndex] declaration order.
+    const hidden = <int>[2, 3, 4, 5, 6, 7, 8, 9, 10];
     for (final i in hidden) {
       if (i >= 0 && i < _isVisible.length) {
         _isVisible[i] = false;
