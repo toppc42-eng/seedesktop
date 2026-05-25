@@ -176,7 +176,7 @@ const List<ExternalItTool> kExternalItTools = <ExternalItTool>[
   ),
 ];
 
-/// Bundled apps under «Secret folders» (Local maintenance sidebar).
+/// Windows-only bundled apps under «Secret folders» (Local maintenance sidebar).
 const List<ExternalItTool> kSecretFolderItTools = <ExternalItTool>[
   ExternalItTool.extApp(
     nameKey: 'lm-ext-name-folderhide',
@@ -184,6 +184,12 @@ const List<ExternalItTool> kSecretFolderItTools = <ExternalItTool>[
     extAppFileName: 'FolderHide.exe',
   ),
 ];
+
+/// Empty on Linux/macOS/web — secret-folder tools are Windows `.exe` only.
+List<ExternalItTool> secretFolderItToolsForPlatform() {
+  if (kIsWeb || !Platform.isWindows) return const <ExternalItTool>[];
+  return kSecretFolderItTools;
+}
 
 Future<void> _startCmdDetached(String cmdLineAfterC) async {
   try {

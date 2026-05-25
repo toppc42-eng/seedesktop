@@ -1194,7 +1194,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("lm-external-tools-section", "כלים חיצוניים"),
         ("lm-secret-folders-section", "תיקיות סודיות"),
         ("lm-ext-name-folderhide", "Folder Hide"),
-        ("lm-ext-tip-folderhide", "מסתיר ומגן על תיקיות פרטיות — הגדרת סיסמה, הסתרה מסייר הקבצים ושחזור גישה."),
+        ("lm-ext-tip-folderhide", "Windows בלבד — מסתיר ומגן על תיקיות פרטיות: סיסמה, הסתרה מסייר הקבצים ושחזור גישה (FolderHide.exe)."),
         ("lm-ext-name-autoruns", "Autoruns"),
         ("lm-ext-tip-autoruns", "כלי מתקדם המציג רשימה מפורטת של כל התוכנות והתהליכים שמופעלים בעליית הווינדוס."),
         ("lm-ext-name-everything", "Everything"),

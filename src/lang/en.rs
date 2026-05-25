@@ -728,7 +728,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("lm-external-tools-section", "External tools"),
         ("lm-secret-folders-section", "Secret folders"),
         ("lm-ext-name-folderhide", "Folder Hide"),
-        ("lm-ext-tip-folderhide", "Hide and protect private folders — password, conceal from File Explorer, and restore access."),
+        ("lm-ext-tip-folderhide", "Windows only — hide and protect private folders: password, conceal from File Explorer, restore access (FolderHide.exe)."),
         ("lm-ext-name-autoruns", "Autoruns"),
         ("lm-ext-tip-autoruns", "Advanced tool that lists startup entries and components that run when Windows starts."),
         ("lm-ext-name-everything", "Everything"),
