@@ -71,6 +71,14 @@ bool get isDesktopRmmHost => isDesktop && isWindows && !isWeb;
 /// macOS / Linux desktop: remote client (no RMM host tabs); account/cloud/LAN stay available.
 bool get isDesktopConnectClientOnly =>
     isDesktop && (isLinux || isMacOS) && !isWeb;
+
+/// Desktop remote view: Linux without GPU texture uses RGBA paint (see [use_texture_render] in Rust).
+bool desktopEffectiveUseTextureRender() {
+  if (!isDesktop || !bind.mainGetUseTextureRender()) return false;
+  if (isLinux && !bind.mainHasGpuTextureRender()) return false;
+  return true;
+}
+
 var version = '';
 int androidVersion = 0;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gpu_texture_renderer/flutter_gpu_texture_renderer.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -47,7 +48,11 @@ class _PixelbufferTexture {
         // sleep for a while to avoid the texture is used after it's unregistered.
         await Future.delayed(Duration(milliseconds: 100));
       }
-      await textureRenderer.closeTexture(_textureKey);
+      try {
+        await textureRenderer.closeTexture(_textureKey);
+      } on MissingPluginException catch (e) {
+        debugPrint('closeTexture skipped: $e');
+      }
       _textureKey = -1;
       _destroying = false;
       debugPrint(

@@ -2132,7 +2132,7 @@ class ImageModel with ChangeNotifier {
 
   updateUserTextureRender() {
     final preValue = _useTextureRender;
-    _useTextureRender = isDesktop && bind.mainGetUseTextureRender();
+    _useTextureRender = desktopEffectiveUseTextureRender();
     if (preValue != _useTextureRender) {
       notifyListeners();
     }
@@ -4029,13 +4029,14 @@ class FFI {
         } else if (message is EventToUI_Texture) {
           final display = message.field0;
           final gpuTexture = message.field1;
+          final useGpu = gpuTexture && hasGpuTextureRender;
           debugPrint(
-              "EventToUI_Texture display:$display, gpuTexture:$gpuTexture");
+              "EventToUI_Texture display:$display, gpuTexture:$gpuTexture, useGpu:$useGpu");
           if (gpuTexture && !hasGpuTextureRender) {
-            debugPrint('the gpuTexture is not supported.');
-            return;
+            debugPrint(
+                'gpuTexture not supported on this platform; waiting for RGBA frames');
           }
-          textureModel.setTextureType(display: display, gpuTexture: gpuTexture);
+          textureModel.setTextureType(display: display, gpuTexture: useGpu);
           onEvent2UIRgba();
         }
       }();

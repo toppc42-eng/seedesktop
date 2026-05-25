@@ -193,9 +193,10 @@ pub fn use_texture_render() -> bool {
     return cfg!(feature = "flutter")
         && LocalConfig::get_option(config::keys::OPTION_TEXTURE_RENDER) == "Y";
 
+    // Linux .deb builds without `vram` use RGBA soft-render; pixel-buffer texture often never paints.
     #[cfg(target_os = "linux")]
-    return cfg!(feature = "flutter")
-        && LocalConfig::get_option(config::keys::OPTION_TEXTURE_RENDER) != "N";
+    return cfg!(all(feature = "flutter", feature = "vram"))
+        && LocalConfig::get_option(config::keys::OPTION_TEXTURE_RENDER) == "Y";
 
     #[cfg(target_os = "windows")]
     {

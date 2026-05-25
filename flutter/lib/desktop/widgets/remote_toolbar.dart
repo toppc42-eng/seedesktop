@@ -523,10 +523,14 @@ class _LicenseScopeBadgeState extends State<_LicenseScopeBadge> {
   }
 
   Future<void> _refreshTier() async {
-    final next = await getLocalLicenseTier();
-    if (!mounted) return;
-    if (next != _tier) {
-      setState(() => _tier = next);
+    try {
+      final next = await getLocalLicenseTier();
+      if (!mounted) return;
+      if (next != _tier) {
+        setState(() => _tier = next);
+      }
+    } catch (e) {
+      debugPrint('_LicenseScopeBadge._refreshTier: $e');
     }
   }
 
@@ -727,11 +731,8 @@ class _MonitorMenu extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        SvgPicture.asset(
-                          "assets/screen.svg",
-                          colorFilter:
-                              ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                        ),
+                        _toolbarSvgIcon(
+                            "assets/screen.svg", _ToolbarTheme.buttonSize),
                         Obx(() => buildOneMonitorButton(i, display.value)),
                       ],
                     ),
@@ -977,9 +978,14 @@ class ScreenAdjustor {
   }
 
   _getScreenInfoDesktop() async {
-    final v = await rustDeskWinManager.call(
-        WindowType.Main, kWindowGetWindowInfo, '');
-    return v.result;
+    try {
+      final v = await rustDeskWinManager.call(
+          WindowType.Main, kWindowGetWindowInfo, '');
+      return v.result;
+    } catch (e) {
+      debugPrint('ScreenAdjustor._getScreenInfoDesktop: $e');
+      return null;
+    }
   }
 
   Future<bool> isWindowCanBeAdjusted() async {
@@ -2380,12 +2386,7 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
   Widget build(BuildContext context) {
     assert(widget.assetName != null || widget.icon != null);
     final icon = widget.icon ??
-        SvgPicture.asset(
-          widget.assetName!,
-          colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
-          width: _ToolbarTheme.buttonSize,
-          height: _ToolbarTheme.buttonSize,
-        );
+        _toolbarSvgIcon(widget.assetName!, _ToolbarTheme.buttonSize);
     var button = SizedBox(
       width: widget.width ?? _ToolbarTheme.buttonSize,
       height: _ToolbarTheme.buttonSize,
@@ -2453,6 +2454,61 @@ class _IconSubmenuButton extends StatefulWidget {
   State<_IconSubmenuButton> createState() => _IconSubmenuButtonState();
 }
 
+IconData? _toolbarSvgFallbackIcon(String asset) {
+  switch (asset) {
+    case 'assets/actions.svg':
+      return Icons.tune;
+    case 'assets/display.svg':
+      return Icons.desktop_windows_outlined;
+    case 'assets/keyboard_mouse.svg':
+      return Icons.keyboard_outlined;
+    case 'assets/chat.svg':
+      return Icons.chat_bubble_outline;
+    case 'assets/voice_call.svg':
+      return Icons.call_outlined;
+    case 'assets/screen.svg':
+      return Icons.monitor_outlined;
+    case 'assets/pinned.svg':
+      return Icons.push_pin;
+    case 'assets/unpinned.svg':
+      return Icons.push_pin_outlined;
+    case 'assets/actions_mobile.svg':
+      return Icons.smartphone_outlined;
+    case 'assets/rec.svg':
+      return Icons.fiber_manual_record;
+    case 'assets/close.svg':
+      return Icons.close;
+    case 'assets/message_24dp_5F6368.svg':
+      return Icons.message_outlined;
+    case 'assets/call_wait.svg':
+      return Icons.phone_callback;
+    default:
+      return Icons.widgets_outlined;
+  }
+}
+
+Widget _toolbarSvgIcon(String asset, double size) {
+  // Linux remote sub-windows may not bundle SVG assets; Material icons always work.
+  if (isLinux) {
+    return Icon(
+      _toolbarSvgFallbackIcon(asset),
+      color: Colors.white,
+      size: size * 0.72,
+    );
+  }
+  return SvgPicture.asset(
+    asset,
+    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+    width: size,
+    height: size,
+    placeholderBuilder: (_) => Icon(
+      _toolbarSvgFallbackIcon(asset),
+      color: Colors.white,
+      size: size * 0.72,
+    ),
+  );
+}
+
 class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
   bool hover = false;
 
@@ -2465,12 +2521,7 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
   Widget build(BuildContext context) {
     assert(widget.svg != null || widget.icon != null);
     final icon = widget.icon ??
-        SvgPicture.asset(
-          widget.svg!,
-          colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
-          width: _ToolbarTheme.buttonSize,
-          height: _ToolbarTheme.buttonSize,
-        );
+        _toolbarSvgIcon(widget.svg!, _ToolbarTheme.buttonSize);
     final button = SizedBox(
         width: widget.width ?? _ToolbarTheme.buttonSize,
         height: _ToolbarTheme.buttonSize,

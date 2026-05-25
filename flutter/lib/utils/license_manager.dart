@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -57,7 +58,50 @@ const String _kLicenseDebugLogFileName = 'seedesktop_license_debug.log';
 const List<int> _kReconnectBackoffSeconds = [2, 5, 10, 30];
 const String _kForcedLicenseApiHost = 'api.seedesktop.com';
 const String _kForcedRendezvousHost = 'api.seedesktop.com';
-const FlutterSecureStorage _licenseSecureStorage = FlutterSecureStorage();
+const FlutterSecureStorage _licenseSecureStorage = FlutterSecureStorage(
+  lOptions: LinuxOptions(),
+);
+
+Future<String?> _readLicenseFromPrefs() async {
+  final prefs = await SharedPreferences.getInstance();
+  final key = prefs.getString(_kLegacySavedLicenseKey)?.trim();
+  return (key == null || key.isEmpty) ? null : key;
+}
+
+Future<String?> _readLicenseFromSecureStorage() async {
+  try {
+    return (await _licenseSecureStorage.read(key: _kLegacySavedLicenseKey))
+        ?.trim();
+  } on MissingPluginException catch (e) {
+    debugPrint('license secure storage unavailable: $e');
+    return null;
+  } catch (e) {
+    debugPrint('license secure storage read failed: $e');
+    return null;
+  }
+}
+
+Future<void> _writeLicenseToSecureStorage(String value) async {
+  try {
+    await _licenseSecureStorage.write(
+      key: _kLegacySavedLicenseKey,
+      value: value,
+    );
+  } on MissingPluginException catch (e) {
+    debugPrint('license secure storage write skipped: $e');
+  } catch (e) {
+    debugPrint('license secure storage write failed: $e');
+  }
+}
+
+Future<void> _deleteLicenseFromSecureStorage() async {
+  try {
+    await _licenseSecureStorage.delete(key: _kLegacySavedLicenseKey);
+  } on MissingPluginException catch (_) {
+  } catch (e) {
+    debugPrint('license secure storage delete failed: $e');
+  }
+}
 bool _startupSessionCleanupTriggered = false;
 const Set<String> _kLicenseEndpointNames = <String>{
   'check_license',
@@ -633,39 +677,39 @@ Future<void> migrateSavedLicenseKeyToSecureStorage() async {
   final prefs = await SharedPreferences.getInstance();
   final legacyKey = prefs.getString(_kLegacySavedLicenseKey)?.trim();
   if (legacyKey != null && legacyKey.isNotEmpty) {
-    final secureKey =
-        (await _licenseSecureStorage.read(key: _kLegacySavedLicenseKey))
-            ?.trim();
+    final secureKey = await _readLicenseFromSecureStorage();
     if (secureKey == null || secureKey.isEmpty) {
-      await _licenseSecureStorage.write(
-        key: _kLegacySavedLicenseKey,
-        value: legacyKey,
-      );
-      await prefs.setString('masked_license', maskLicense(legacyKey));
+      await _writeLicenseToSecureStorage(legacyKey);
+      final verify = await _readLicenseFromSecureStorage();
+      if (verify != null && verify.isNotEmpty) {
+        await prefs.setString('masked_license', maskLicense(legacyKey));
+        await prefs.remove(_kLegacySavedLicenseKey);
+      }
+    } else {
+      await prefs.remove(_kLegacySavedLicenseKey);
     }
   }
-  await prefs.remove(_kLegacySavedLicenseKey);
 }
 
 Future<String?> getSavedLicenseKey() async {
   await migrateSavedLicenseKeyToSecureStorage();
-  final key =
-      (await _licenseSecureStorage.read(key: _kLegacySavedLicenseKey))?.trim();
-  return (key == null || key.isEmpty) ? null : key;
+  final secure = await _readLicenseFromSecureStorage();
+  if (secure != null && secure.isNotEmpty) {
+    return secure;
+  }
+  return _readLicenseFromPrefs();
 }
 
 Future<void> _setSavedLicenseKey(String licenseKey) async {
   final key = licenseKey.trim();
   final prefs = await SharedPreferences.getInstance();
-  await prefs.remove(_kLegacySavedLicenseKey);
   if (key.isEmpty) {
-    await _licenseSecureStorage.delete(key: _kLegacySavedLicenseKey);
+    await prefs.remove(_kLegacySavedLicenseKey);
+    await _deleteLicenseFromSecureStorage();
     return;
   }
-  await _licenseSecureStorage.write(
-    key: _kLegacySavedLicenseKey,
-    value: key,
-  );
+  await prefs.setString(_kLegacySavedLicenseKey, key);
+  await _writeLicenseToSecureStorage(key);
 }
 
 Future<void> cacheHardwareId(String hardwareId) async {
@@ -2217,7 +2261,7 @@ Future<void> saveLicenseToPrefs(
 Future<void> clearLicensePrefs() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove(_kLegacySavedLicenseKey);
-  await _licenseSecureStorage.delete(key: _kLegacySavedLicenseKey);
+  await _deleteLicenseFromSecureStorage();
   await prefs.remove('masked_license');
   await prefs.remove(kLicenseExpiryIsoPrefsKey);
   await prefs.remove(kLicenseIsExpiredPrefsKey);

@@ -31,6 +31,15 @@ extern bool gIsConnectionManager;
 
 GtkWidget *find_gl_area(GtkWidget *widget);
 
+// Remote / file-transfer sub-windows need their own plugin registrars (secure storage,
+// desktop_multi_window, texture_rgba_renderer, SVG assets, etc.).
+static void seedesktop_on_sub_window_created(FlView* view) {
+  fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+#if defined(GDK_WINDOWING_WAYLAND) && defined(HAS_KEYBOARD_SHORTCUTS_INHIBIT)
+  wayland_shortcuts_inhibit_init_for_subwindow(view);
+#endif
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
@@ -96,12 +105,8 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_show(GTK_WIDGET(window));
   gtk_widget_show(GTK_WIDGET(view));
 
-#if defined(GDK_WINDOWING_WAYLAND) && defined(HAS_KEYBOARD_SHORTCUTS_INHIBIT)
-  // Register callback for sub-windows created by desktop_multi_window plugin
-  // Only sub-windows (remote windows) need keyboard shortcuts inhibition
   desktop_multi_window_plugin_set_window_created_callback(
-      (WindowCreatedCallback)wayland_shortcuts_inhibit_init_for_subwindow);
-#endif
+      (WindowCreatedCallback)seedesktop_on_sub_window_created);
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
