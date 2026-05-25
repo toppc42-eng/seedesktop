@@ -56,17 +56,19 @@ class PeerTabModel with ChangeNotifier {
     Icons.send,
   ];
   List<bool> isEnabled = List.from([
-    true,
-    true,
-    !bind.isDisableAccount(),
-    !isWeb && bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y",
-    false, // Health Monitor (legacy FFI) — superseded by My Devices / VPS RMM
-    false,
-    false,
-    true,
-    true,
-    isWindows,
-    isWindows,
+    true, // recent — all desktop
+    true, // favorites — all desktop
+    !bind.isDisableAccount() && !isDesktopConnectClientOnly, // cloud contacts (Windows / account)
+    !isWeb &&
+        bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y" &&
+        !isDesktopConnectClientOnly, // discovered / LAN
+    false, // health (legacy)
+    false, // address book
+    false, // accessible devices / groups
+    isDesktopRmmHost, // my devices (RMM)
+    isDesktopRmmHost, // script manager (RMM)
+    isWindows, // local maintenance
+    isWindows, // secure transfer
   ]);
   final List<bool> _isVisible = List.filled(maxTabCount, true, growable: false);
   List<bool> get isVisibleEnabled => () {
@@ -137,15 +139,41 @@ class PeerTabModel with ChangeNotifier {
     // - Recent must be visible.
     // - Recent must be the default landing page.
     _ensureRecentIsFirstInOrder();
+    _applyConnectClientOnlyTabVisibility();
     _ensureLocalMaintenanceAfterLan();
     _ensureRecentVisible();
     _currentTab = PeerTabIndex.recent.index;
     _trySetCurrentTabToFirstVisibleEnabled();
   }
 
+  /// macOS / Linux: only Recent + Favorites in the top bar (no RMM / cloud / LAN tabs).
+  void _applyConnectClientOnlyTabVisibility() {
+    if (!isDesktopConnectClientOnly) return;
+    const hidden = <int>[
+      PeerTabIndex.cloudContacts.index,
+      PeerTabIndex.lan.index,
+      PeerTabIndex.health.index,
+      PeerTabIndex.ab.index,
+      PeerTabIndex.group.index,
+      PeerTabIndex.myDevices.index,
+      PeerTabIndex.scriptManager.index,
+      PeerTabIndex.localMaintenance.index,
+      PeerTabIndex.secureTransfer.index,
+    ];
+    for (final i in hidden) {
+      if (i >= 0 && i < _isVisible.length) {
+        _isVisible[i] = false;
+      }
+    }
+    try {
+      bind.setLocalFlutterOption(
+          k: kOptionPeerTabVisible, v: jsonEncode(_isVisible));
+    } catch (_) {}
+  }
+
   /// Keeps the local maintenance tab immediately after "Discovered" in the top bar order.
   void _ensureLocalMaintenanceAfterLan() {
-    if (maxTabCount != 11) return;
+    if (!isWindows || maxTabCount != 11) return;
     const lm = 8;
     const lan = 2;
     if (!orders.contains(lm)) return;

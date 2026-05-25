@@ -134,8 +134,14 @@ class _PeerTabPageState extends State<PeerTabPage>
     m.setCurrentTabCachedPeers([]);
   }
 
-  /// When admin turned off RMM/scripts UI, My Devices / Script Manager are hidden for everyone.
+  /// Platform policy + admin RMM toggle (My Devices / Script Manager).
   bool _rmmSessionAllowsTabIndex(int tabIndex) {
+    final model = gFFI.peerTabModel;
+    if (tabIndex >= 0 &&
+        tabIndex < PeerTabModel.maxTabCount &&
+        !model.isEnabled[tabIndex]) {
+      return false;
+    }
     if (tabIndex != PeerTabIndex.myDevices.index &&
         tabIndex != PeerTabIndex.scriptManager.index) {
       return true;
@@ -180,6 +186,11 @@ class _PeerTabPageState extends State<PeerTabPage>
   }
 
   Future<void> handleTabSelection(int tabIndex) async {
+    if (tabIndex >= 0 &&
+        tabIndex < PeerTabModel.maxTabCount &&
+        !gFFI.peerTabModel.isEnabled[tabIndex]) {
+      return;
+    }
     final isPremiumFavoritesTab = tabIndex == PeerTabIndex.fav.index;
     final isPremiumCloudContactsTab =
         tabIndex == PeerTabIndex.cloudContacts.index;

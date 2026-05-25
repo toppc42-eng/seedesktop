@@ -64,6 +64,13 @@ final isWebOnWindows = isWebOnWindows_;
 final isWebOnLinux = isWebOnLinux_;
 final isWebOnMacOs = isWebOnMacOS_;
 var isMobile = isAndroid || isIOS;
+
+/// Windows desktop: RMM, local maintenance, secure transfer, cloud/LAN RMM tabs.
+bool get isDesktopRmmHost => isDesktop && isWindows && !isWeb;
+
+/// macOS / Linux desktop: remote client only (Recent, Favorites, standard Pro remote).
+bool get isDesktopConnectClientOnly =>
+    isDesktop && (isLinux || isMacOS) && !isWeb;
 var version = '';
 int androidVersion = 0;
 
