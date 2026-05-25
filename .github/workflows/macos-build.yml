@@ -42,8 +42,8 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
       # Pin Flutter: latest stable breaks this tree (extended_text / theme APIs / google_fonts).
       FLUTTER_VERSION: "3.24.5"
-      # cpal/cidre on macOS needs >= 1.81 (see flutter-build.yml MAC_RUST_VERSION).
-      RUST_VERSION: "1.81"
+      # >= 1.81 for cpal/cidre; >= 1.85 for edition2024 deps (e.g. time-core in Cargo.lock).
+      RUST_VERSION: "1.85"
 
     steps:
       - name: Export GitHub Actions cache environment variables
