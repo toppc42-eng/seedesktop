@@ -2222,6 +2222,20 @@ void connectInPeerTab(BuildContext context, Peer peer, PeerTabIndex tab,
     bool isTerminal = false}) async {
   var password = '';
   bool isSharedPassword = false;
+  Future<void> applySharedAbPasswordIfNeeded() async {
+    if (gFFI.abModel.current.isPersonal()) return;
+    if (peer.password.isNotEmpty) {
+      password = peer.password;
+      isSharedPassword = true;
+    }
+    if (password.isEmpty) {
+      final abPassword = gFFI.abModel.getdefaultSharedPassword();
+      if (abPassword != null) {
+        password = abPassword;
+        isSharedPassword = true;
+      }
+    }
+  };
   if (tab == PeerTabIndex.ab) {
     // If recent peer's alias is empty, set it to ab's alias
     // Because the platform is not set, it may not take effect, but it is more important not to display if the connection is not successful
@@ -2232,17 +2246,25 @@ void connectInPeerTab(BuildContext context, Peer peer, PeerTabIndex tab,
         alias: peer.alias,
       );
     }
-    if (!gFFI.abModel.current.isPersonal()) {
-      if (peer.password.isNotEmpty) {
-        password = peer.password;
-        isSharedPassword = true;
-      }
-      if (password.isEmpty) {
-        final abPassword = gFFI.abModel.getdefaultSharedPassword();
-        if (abPassword != null) {
-          password = abPassword;
+    await applySharedAbPasswordIfNeeded();
+  } else if (tab == PeerTabIndex.group ||
+      tab == PeerTabIndex.cloudContacts) {
+    await applySharedAbPasswordIfNeeded();
+  } else if (tab == PeerTabIndex.recent || tab == PeerTabIndex.fav) {
+    // Local saved password: Rust reads PeerConfig when [password] is empty.
+    final hasLocal = await bind.mainPeerHasPassword(id: peer.id);
+    if (!hasLocal && gFFI.userModel.isLogin) {
+      for (final ab in gFFI.abModel.addressbooks.values) {
+        if (ab.isPersonal()) continue;
+        final p = ab.peers.firstWhereOrNull((e) => e.id == peer.id);
+        if (p != null && p.password.isNotEmpty) {
+          password = p.password;
           isSharedPassword = true;
+          break;
         }
+      }
+      if (password.isEmpty && !gFFI.abModel.current.isPersonal()) {
+        await applySharedAbPasswordIfNeeded();
       }
     }
   }

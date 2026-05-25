@@ -58,13 +58,12 @@ class PeerTabModel with ChangeNotifier {
   List<bool> isEnabled = List.from([
     true, // recent — all desktop
     true, // favorites — all desktop
-    !bind.isDisableAccount() && !isDesktopConnectClientOnly, // cloud contacts (Windows / account)
+    !bind.isDisableAccount(), // cloud contacts (account)
     !isWeb &&
-        bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y" &&
-        !isDesktopConnectClientOnly, // discovered / LAN
+        bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y", // LAN
     false, // health (legacy)
-    false, // address book
-    false, // accessible devices / groups
+    !bind.isDisableAccount(), // address book (account)
+    !bind.isDisableAccount(), // accessible devices / groups (account)
     isDesktopRmmHost, // my devices (RMM)
     isDesktopRmmHost, // script manager (RMM)
     isWindows, // local maintenance
@@ -146,11 +145,11 @@ class PeerTabModel with ChangeNotifier {
     _trySetCurrentTabToFirstVisibleEnabled();
   }
 
-  /// macOS / Linux: only Recent + Favorites in the top bar (no RMM / cloud / LAN tabs).
+  /// macOS / Linux: hide RMM-only tabs; keep account/cloud/LAN/AB for remote client use.
   void _applyConnectClientOnlyTabVisibility() {
     if (!isDesktopConnectClientOnly) return;
     // Indices must match [PeerTabIndex] declaration order.
-    const hidden = <int>[2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const hidden = <int>[4, 7, 8, 9, 10];
     for (final i in hidden) {
       if (i >= 0 && i < _isVisible.length) {
         _isVisible[i] = false;

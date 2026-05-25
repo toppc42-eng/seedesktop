@@ -173,7 +173,8 @@ class RustDeskMultiWindowManager {
         overrideType: type,
       ));
     }
-    if (isMacOS) {
+    // Linux sub-windows are created hidden; macOS needs an explicit show as well.
+    if (isMacOS || isLinux) {
       Future.microtask(() => windowController.show());
     }
     registerActiveWindow(windowId);
@@ -207,7 +208,9 @@ class RustDeskMultiWindowManager {
                   windowId: windowId, peerId: remoteId);
             }
             await DesktopMultiWindow.invokeMethod(windowId, methodName, msg);
-            if (methodName != kWindowEventNewRemoteDesktop) {
+            if (methodName != kWindowEventNewRemoteDesktop ||
+                isLinux ||
+                isMacOS) {
               WindowController.fromWindowId(windowId).show();
             }
             registerActiveWindow(windowId);

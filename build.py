@@ -83,11 +83,16 @@ def apply_custom_branding_windows_icons():
 
 
 def apply_custom_branding_linux_icons():
-    """Copy Linux menu icons into res/ when custom PNG/SVG branding exists."""
+    """Copy Linux menu icons into res/ when custom PNG/SVG/ICO branding exists."""
     branding_dir = Path("custom_branding")
     if not branding_dir.exists():
         return
     Path("res").mkdir(parents=True, exist_ok=True)
+    app_ico = branding_dir / "app_icon.ico"
+    if app_ico.exists():
+        shutil.copy2(app_ico, Path("res/icon.ico"))
+        Path("flutter/assets").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(app_ico, Path("flutter/assets/icon.ico"))
     app_png = branding_dir / "app_icon.png"
     app_svg = branding_dir / "app_icon.svg"
     if app_png.exists():
@@ -104,6 +109,13 @@ def ensure_linux_deb_icons():
     """Create res/*.png for .deb staging (CI has no local *png/*svg except tracked res/icon.ico)."""
     res = Path("res")
     res.mkdir(parents=True, exist_ok=True)
+    ico = res / "icon.ico"
+    stamp = res / "128x128@2x.png"
+    if ico.is_file() and stamp.is_file() and ico.stat().st_mtime > stamp.stat().st_mtime:
+        for name in ("32x32", "64x64", "128x128", "128x128@2x"):
+            p = res / f"{name}.png"
+            if p.is_file():
+                p.unlink()
     if (res / "128x128@2x.png").is_file():
         return
     apply_custom_branding_linux_icons()
@@ -521,6 +533,7 @@ def build_flutter_deb(version, features):
     if not skip_cargo:
         system2(f'cargo build --features {features} --lib --release')
         ffi_bindgen_function_refactor()
+    apply_custom_branding_windows_icons()
     apply_custom_branding_linux_icons()
     ensure_linux_deb_icons()
     os.chdir('flutter')
@@ -530,6 +543,7 @@ def build_flutter_deb(version, features):
 
 
 def build_deb_from_folder(version, binary_folder):
+    apply_custom_branding_windows_icons()
     apply_custom_branding_linux_icons()
     ensure_linux_deb_icons()
     os.chdir('flutter')
