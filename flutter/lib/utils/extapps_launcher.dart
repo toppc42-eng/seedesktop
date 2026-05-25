@@ -176,6 +176,15 @@ const List<ExternalItTool> kExternalItTools = <ExternalItTool>[
   ),
 ];
 
+/// Bundled apps under «Secret folders» (Local maintenance sidebar).
+const List<ExternalItTool> kSecretFolderItTools = <ExternalItTool>[
+  ExternalItTool.extApp(
+    nameKey: 'lm-ext-name-folderhide',
+    tooltipKey: 'lm-ext-tip-folderhide',
+    extAppFileName: 'FolderHide.exe',
+  ),
+];
+
 Future<void> _startCmdDetached(String cmdLineAfterC) async {
   try {
     await Process.start(

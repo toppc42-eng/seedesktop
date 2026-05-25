@@ -24,7 +24,10 @@ import 'package:flutter_hbb/utils/multi_window_manager.dart'
     show rustDeskWinManager;
 import 'package:flutter_hbb/utils/seedesktop_cleanup_launcher.dart';
 import 'package:flutter_hbb/utils/extapps_launcher.dart'
-    show ExternalItTool, kExternalItTools, launchExternalItTool;
+    show ExternalItTool,
+        kExternalItTools,
+        kSecretFolderItTools,
+        launchExternalItTool;
 import 'package:flutter_hbb/common/widgets/rmm_pro_gate_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -2023,6 +2026,26 @@ class _LocalMaintenancePageState extends State<LocalMaintenancePage> {
                               unawaited(_openLocalSystemTerminal()),
                         ),
                         if (!kIsWeb && Platform.isWindows) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            translate('lm-secret-folders-section'),
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: _lmActionInnerSize(11),
+                              fontWeight: FontWeight.w800,
+                              color: kLocalMaintenanceCopper,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          for (var i = 0; i < kSecretFolderItTools.length; i++) ...[
+                            _sidebarExternalToolButton(
+                              context,
+                              tool: kSecretFolderItTools[i],
+                            ),
+                            if (i < kSecretFolderItTools.length - 1)
+                              const SizedBox(height: 8),
+                          ],
                           const SizedBox(height: 14),
                           Text(
                             translate('lm-external-tools-section'),

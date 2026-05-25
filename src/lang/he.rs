@@ -1192,6 +1192,9 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
 
 8.0–9.9 תחנת עבודה / גיימינג קיצון: עריכת וידאו כבדה, מודלים בתלת־ממד וגיימינג בהגדרות גבוהות."),
         ("lm-external-tools-section", "כלים חיצוניים"),
+        ("lm-secret-folders-section", "תיקיות סודיות"),
+        ("lm-ext-name-folderhide", "Folder Hide"),
+        ("lm-ext-tip-folderhide", "מסתיר ומגן על תיקיות פרטיות — הגדרת סיסמה, הסתרה מסייר הקבצים ושחזור גישה."),
         ("lm-ext-name-autoruns", "Autoruns"),
         ("lm-ext-tip-autoruns", "כלי מתקדם המציג רשימה מפורטת של כל התוכנות והתהליכים שמופעלים בעליית הווינדוס."),
         ("lm-ext-name-everything", "Everything"),
