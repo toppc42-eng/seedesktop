@@ -20,7 +20,6 @@ import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/plugin/ui_manager.dart';
 import 'package:flutter_hbb/utils/freemium_guard.dart';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
 import 'package:get/get.dart';
@@ -878,15 +877,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         await rustDeskWinManager.unregisterActiveWindow(call.arguments['id']);
       } else if (call.method == kWindowEventCloseSubWindow) {
         final id = call.arguments['id'] as int;
-        try {
-          final wc = WindowController.fromWindowId(id);
-          await wc.setPreventClose(false);
-          await wc.hide();
-          await wc.close();
-        } catch (e) {
-          debugPrint('close_sub_window($id) failed: $e');
-        }
-        await rustDeskWinManager.unregisterActiveWindow(id);
+        await hideDesktopSubWindow(id);
       } else if (call.method == kWindowConnect) {
         await connectMainDesktop(
           call.arguments['id'],

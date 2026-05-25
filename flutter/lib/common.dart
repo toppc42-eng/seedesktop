@@ -755,15 +755,43 @@ void closeConnection({String? id}) {
 /// Linux sub-windows: hide/close must run on the main engine (multi_window channel).
 Future<void> hideDesktopSubWindow(int windowId) async {
   if (!isDesktop) return;
-  if (isLinux && windowId != kWindowMainId) {
+
+  Future<void> closeOnMainEngine() async {
+    final wc = WindowController.fromWindowId(windowId);
     try {
-      await rustDeskWinManager.call(
-          WindowType.Main, kWindowEventCloseSubWindow, {"id": windowId});
+      await wc.setPreventClose(false);
+      await wc.hide();
+      await wc.close();
     } catch (e) {
-      debugPrint('hideDesktopSubWindow via main: $e');
+      debugPrint('hideDesktopSubWindow closeOnMainEngine: $e');
+    }
+    try {
+      await rustDeskWinManager.unregisterActiveWindow(windowId);
+    } catch (e) {
+      try {
+        await rustDeskWinManager.call(
+            WindowType.Main, kWindowEventHide, {"id": windowId});
+      } catch (e2) {
+        debugPrint('hideDesktopSubWindow unregister: $e2');
+      }
+    }
+  }
+
+  final onMainEngine = kWindowId == null || kWindowId == kWindowMainId;
+  if (isLinux && windowId != kWindowMainId) {
+    if (onMainEngine) {
+      await closeOnMainEngine();
+    } else {
+      try {
+        await rustDeskWinManager.call(
+            WindowType.Main, kWindowEventCloseSubWindow, {"id": windowId});
+      } catch (e) {
+        debugPrint('hideDesktopSubWindow via main: $e');
+      }
     }
     return;
   }
+
   final wc = WindowController.fromWindowId(windowId);
   try {
     await wc.hide();

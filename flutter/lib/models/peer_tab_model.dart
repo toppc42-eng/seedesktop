@@ -150,9 +150,16 @@ class PeerTabModel with ChangeNotifier {
     if (!isDesktopConnectClientOnly) return;
     // Indices must match [PeerTabIndex] declaration order.
     const hidden = <int>[4, 7, 8, 9, 10];
+    // Restore tabs that older builds hid on Linux/macOS (saved in local options).
+    const ensureVisible = <int>[2, 3, 5, 6];
     for (final i in hidden) {
       if (i >= 0 && i < _isVisible.length) {
         _isVisible[i] = false;
+      }
+    }
+    for (final i in ensureVisible) {
+      if (i >= 0 && i < _isVisible.length && isEnabled[i]) {
+        _isVisible[i] = true;
       }
     }
     try {

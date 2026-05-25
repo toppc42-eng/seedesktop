@@ -470,7 +470,7 @@ class _DesktopTabState extends State<DesktopTab>
     notMainWindowClose(WindowController windowController) async {
       if (controller.length != 0) {
         debugPrint("close not empty multiwindow from taskbar");
-        if (isWindows) {
+        if (isWindows || isLinux) {
           await windowController.show();
           await windowController.focus();
           final res = await onWindowCloseButton?.call() ?? true;
