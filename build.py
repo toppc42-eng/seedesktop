@@ -99,6 +99,52 @@ def apply_custom_branding_linux_icons():
         # flat PNG fallback for scalable slot
         shutil.copy2(app_png, Path("res/scalable.svg"))
 
+
+def ensure_linux_deb_icons():
+    """Create res/*.png for .deb staging when branding files are not in the tree (CI/Linux)."""
+    res = Path("res")
+    res.mkdir(parents=True, exist_ok=True)
+    if (res / "128x128@2x.png").is_file():
+        return
+    apply_custom_branding_linux_icons()
+    if (res / "128x128@2x.png").is_file():
+        return
+    src_svg = res / "scalable.svg"
+    if not src_svg.is_file():
+        flutter_svg = Path("flutter/assets/icon.svg")
+        if flutter_svg.is_file():
+            shutil.copy2(flutter_svg, src_svg)
+    if not src_svg.is_file():
+        sys.stderr.write(
+            "Missing Linux .deb icons: add custom_branding/app_icon.png or res/scalable.svg\n"
+        )
+        sys.exit(-1)
+    for name, px in (
+        ("32x32", 32),
+        ("64x64", 64),
+        ("128x128", 128),
+        ("128x128@2x", 256),
+    ):
+        out = res / f"{name}.png"
+        if out.is_file():
+            continue
+        raster_cmds = (
+            f'rsvg-convert -w {px} -h {px} "{src_svg}" -o "{out}"',
+            f'convert -background none -resize {px}x{px} "{src_svg}" "{out}"',
+        )
+        ok = False
+        for cmd in raster_cmds:
+            if os.system(cmd) == 0 and out.is_file():
+                ok = True
+                break
+        if not ok:
+            sys.stderr.write(
+                f"Failed to create {out} from {src_svg}; "
+                "install librsvg2-bin (rsvg-convert) or imagemagick on the build host.\n"
+            )
+            sys.exit(-1)
+
+
 def apply_custom_branding_macos_icons():
     """Copy macOS AppIcon.icns from custom branding PNG when available (Darwin only)."""
     if sys.platform != "darwin":
@@ -146,7 +192,7 @@ def stage_linux_flutter_deb(version: str, bundle_source: str):
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
     system2('mkdir -p tmpdeb/usr/share/applications/')
     system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2(f'rm tmpdeb/usr/bin/{LINUX_BINARY} || true')
+    system2(f'rm -f tmpdeb/usr/bin/{LINUX_BINARY}')
     system2(f'cp -r {bundle_source}/* {share}/')
     system2(
         f'cp ../res/{LINUX_PKG_NAME}.service {share}/files/systemd/')
@@ -451,6 +497,7 @@ def build_flutter_deb(version, features):
         system2(f'cargo build --features {features} --lib --release')
         ffi_bindgen_function_refactor()
     apply_custom_branding_linux_icons()
+    ensure_linux_deb_icons()
     os.chdir('flutter')
     system2('flutter build linux --release')
     stage_linux_flutter_deb(version, flutter_build_dir)
@@ -459,6 +506,7 @@ def build_flutter_deb(version, features):
 
 def build_deb_from_folder(version, binary_folder):
     apply_custom_branding_linux_icons()
+    ensure_linux_deb_icons()
     os.chdir('flutter')
     stage_linux_flutter_deb(version, f'../{binary_folder}')
     os.chdir("..")

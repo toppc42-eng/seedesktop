@@ -89,7 +89,8 @@ jobs:
             libxcb-shape0-dev \
             libxcb-xfixes0-dev \
             libxdo-dev \
-            libxfixes-dev
+            libxfixes-dev \
+            librsvg2-bin
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
