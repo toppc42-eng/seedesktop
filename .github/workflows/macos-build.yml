@@ -78,6 +78,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: x86_64-apple-darwin
+          components: rustfmt
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -159,10 +160,13 @@ jobs:
 
       - name: Build macOS release (app + DMG via build.py)
         env:
-          # Avoid GNU strip from Homebrew llvm breaking release builds (rust-lang/rust#122641).
-          PATH: /usr/bin:/bin:/usr/sbin:/sbin:${{ env.PATH }}
           CARGO_PROFILE_RELEASE_STRIP: "false"
-        run: python3 build.py --flutter --screencapturekit
+        run: |
+          set -euxo pipefail
+          # Prefer Apple strip over Homebrew llvm; keep rustup/cargo on PATH.
+          export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          command -v cargo
+          python3 build.py --flutter --screencapturekit
 
       - name: Publish DMG to GCS
         if: inputs.publish_gcs == 'true'
