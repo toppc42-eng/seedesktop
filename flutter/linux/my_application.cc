@@ -31,13 +31,15 @@ extern bool gIsConnectionManager;
 
 GtkWidget *find_gl_area(GtkWidget *widget);
 
-// Remote / file-transfer sub-windows need their own plugin registrars (secure storage,
-// desktop_multi_window, texture_rgba_renderer, SVG assets, etc.).
+// Sub-window plugin registration is done in desktop_multi_window's FlutterWindow
+// (fl_register_plugins + internal registrar) after rustdesk_is_subwindow is set.
+// Do NOT call fl_register_plugins here: doing so before that flag breaks
+// desktop_multi_window and causes MissingPluginException on hide/close/texture.
 static void seedesktop_on_sub_window_created(FlView* view) {
-  fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 #if defined(GDK_WINDOWING_WAYLAND) && defined(HAS_KEYBOARD_SHORTCUTS_INHIBIT)
   wayland_shortcuts_inhibit_init_for_subwindow(view);
 #endif
+  (void)view;
 }
 
 // Implements GApplication::activate.

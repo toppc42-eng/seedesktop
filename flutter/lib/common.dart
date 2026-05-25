@@ -752,9 +752,18 @@ void closeConnection({String? id}) {
   }
 }
 
-/// Linux sub-windows: [WindowController.close] often throws MissingPluginException; hide works.
+/// Linux sub-windows: hide/close must run on the main engine (multi_window channel).
 Future<void> hideDesktopSubWindow(int windowId) async {
   if (!isDesktop) return;
+  if (isLinux && windowId != kWindowMainId) {
+    try {
+      await rustDeskWinManager.call(
+          WindowType.Main, kWindowEventCloseSubWindow, {"id": windowId});
+    } catch (e) {
+      debugPrint('hideDesktopSubWindow via main: $e');
+    }
+    return;
+  }
   final wc = WindowController.fromWindowId(windowId);
   try {
     await wc.hide();

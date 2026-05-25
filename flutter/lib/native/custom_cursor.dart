@@ -5,11 +5,24 @@ import 'package:flutter_custom_cursor/flutter_custom_cursor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/models/model.dart';
 
-deleteCustomCursor(String key) =>
-    custom_cursor_manager.CursorManager.instance.deleteCursor(key);
-resetSystemCursor() {}
+Future<void> deleteCustomCursor(String key) async {
+  if (isLinux) return;
+  try {
+    await custom_cursor_manager.CursorManager.instance.deleteCursor(key);
+  } on MissingPluginException {
+    // Sub-window or headless engine without native plugin.
+  }
+}
+
+void resetSystemCursor() {}
+
+bool get _customCursorAvailable {
+  if (isLinux) return false;
+  return true;
+}
 
 MouseCursor buildCursorOfCache(
     CursorModel cursor, double scale, CursorData? cache) {
@@ -29,15 +42,20 @@ MouseCursor buildCursorOfCache(
       // It's ok to call async registerCursor in current synchronous context,
       // because activating the cursor is also an async call and will always
       // be executed after this.
-      custom_cursor_manager.CursorManager.instance
-          .registerCursor(custom_cursor_manager.CursorData()
-            ..name = key
-            ..buffer = data
-            ..width = (cache.width * cache.scale).toInt()
-            ..height = (cache.height * cache.scale).toInt()
-            ..hotX = cache.hotx
-            ..hotY = cache.hoty);
-      cursor.addKey(key);
+      if (_customCursorAvailable) {
+        custom_cursor_manager.CursorManager.instance
+            .registerCursor(custom_cursor_manager.CursorData()
+              ..name = key
+              ..buffer = data
+              ..width = (cache.width * cache.scale).toInt()
+              ..height = (cache.height * cache.scale).toInt()
+              ..hotX = cache.hotx
+              ..hotY = cache.hoty);
+        cursor.addKey(key);
+      }
+    }
+    if (!_customCursorAvailable) {
+      return MouseCursor.defer;
     }
     return FlutterCustomMemoryImageCursor(key: key);
   }

@@ -73,8 +73,12 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
         }
         () async {
           final title = await getWindowNameWithIdAndLicense(id);
-          await WindowController.fromWindowId(params['windowId'])
-              .setTitle(title);
+          try {
+            await WindowController.fromWindowId(params['windowId'])
+                .setTitle(title);
+          } catch (_) {
+            // Linux sub-window: setTitle runs on main engine only.
+          }
         }();
         UnreadChatCountState.find(id).value = 0;
       };

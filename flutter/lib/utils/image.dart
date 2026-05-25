@@ -109,7 +109,8 @@ class ImagePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (image == null) return;
+    final img = image;
+    if (img == null) return;
     if (x.isNaN || y.isNaN) return;
     canvas.scale(scale, scale);
     // https://github.com/flutter/flutter/issues/76187#issuecomment-784628161
@@ -126,8 +127,13 @@ class ImagePainter extends CustomPainter {
     if (isWeb) {
       paint.filterQuality = FilterQuality.high;
     }
-    canvas.drawImage(
-        image!, Offset(x.toInt().toDouble(), y.toInt().toDouble()), paint);
+    try {
+      canvas.drawImage(
+          img, Offset(x.toInt().toDouble(), y.toInt().toDouble()), paint);
+    } catch (e) {
+      // Disposed ui.Image after session close (common on Linux RGBA teardown).
+      debugPrint('ImagePainter.drawImage skipped: $e');
+    }
   }
 
   @override

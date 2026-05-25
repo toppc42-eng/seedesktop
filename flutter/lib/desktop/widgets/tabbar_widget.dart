@@ -478,9 +478,13 @@ class _DesktopTabState extends State<DesktopTab>
         }
         controller.clear();
       }
-      await windowController.hide();
-      await rustDeskWinManager
-          .call(WindowType.Main, kWindowEventHide, {"id": kWindowId!});
+      if (isLinux) {
+        await hideDesktopSubWindow(kWindowId!);
+      } else {
+        await windowController.hide();
+        await rustDeskWinManager
+            .call(WindowType.Main, kWindowEventHide, {"id": kWindowId!});
+      }
     }
 
     macOSWindowClose(
