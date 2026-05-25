@@ -21,6 +21,7 @@ cert.pfx
 *.bak
 *png
 *svg
+!res/scalable.svg
 *jpg
 sciter.dll
 **pdb

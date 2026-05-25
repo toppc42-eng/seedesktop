@@ -101,7 +101,7 @@ def apply_custom_branding_linux_icons():
 
 
 def ensure_linux_deb_icons():
-    """Create res/*.png for .deb staging when branding files are not in the tree (CI/Linux)."""
+    """Create res/*.png for .deb staging (CI has no local *png/*svg except tracked res/icon.ico)."""
     res = Path("res")
     res.mkdir(parents=True, exist_ok=True)
     if (res / "128x128@2x.png").is_file():
@@ -109,16 +109,30 @@ def ensure_linux_deb_icons():
     apply_custom_branding_linux_icons()
     if (res / "128x128@2x.png").is_file():
         return
-    src_svg = res / "scalable.svg"
-    if not src_svg.is_file():
-        flutter_svg = Path("flutter/assets/icon.svg")
-        if flutter_svg.is_file():
-            shutil.copy2(flutter_svg, src_svg)
-    if not src_svg.is_file():
+
+    raster_src = None
+    raster_kind = None
+    for path, kind in (
+        (res / "scalable.svg", "svg"),
+        (Path("flutter/assets/icon.svg"), "svg"),
+        (res / "icon.ico", "ico"),
+        (Path("flutter/assets/icon.ico"), "ico"),
+    ):
+        if path.is_file():
+            raster_src = path
+            raster_kind = kind
+            break
+
+    if raster_src is None:
         sys.stderr.write(
-            "Missing Linux .deb icons: add custom_branding/app_icon.png or res/scalable.svg\n"
+            "Missing Linux .deb icons: add custom_branding/app_icon.png, "
+            "res/scalable.svg, or res/icon.ico\n"
         )
         sys.exit(-1)
+
+    if not (res / "scalable.svg").is_file() and raster_kind == "svg":
+        shutil.copy2(raster_src, res / "scalable.svg")
+
     for name, px in (
         ("32x32", 32),
         ("64x64", 64),
@@ -128,10 +142,16 @@ def ensure_linux_deb_icons():
         out = res / f"{name}.png"
         if out.is_file():
             continue
-        raster_cmds = (
-            f'rsvg-convert -w {px} -h {px} "{src_svg}" -o "{out}"',
-            f'convert -background none -resize {px}x{px} "{src_svg}" "{out}"',
-        )
+        if raster_kind == "svg":
+            raster_cmds = (
+                f'rsvg-convert -w {px} -h {px} "{raster_src}" -o "{out}"',
+                f'convert -background none -resize {px}x{px} "{raster_src}" "{out}"',
+            )
+        else:
+            raster_cmds = (
+                f'convert -background none "{raster_src}[0]" -resize {px}x{px} "{out}"',
+                f'convert -background none -resize {px}x{px} "{raster_src}" "{out}"',
+            )
         ok = False
         for cmd in raster_cmds:
             if os.system(cmd) == 0 and out.is_file():
@@ -139,8 +159,8 @@ def ensure_linux_deb_icons():
                 break
         if not ok:
             sys.stderr.write(
-                f"Failed to create {out} from {src_svg}; "
-                "install librsvg2-bin (rsvg-convert) or imagemagick on the build host.\n"
+                f"Failed to create {out} from {raster_src}; "
+                "install librsvg2-bin and/or imagemagick on the build host.\n"
             )
             sys.exit(-1)
 
@@ -198,8 +218,9 @@ def stage_linux_flutter_deb(version: str, bundle_source: str):
         f'cp ../res/{LINUX_PKG_NAME}.service {share}/files/systemd/')
     system2(
         f'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/{LINUX_PKG_NAME}.png')
-    system2(
-        f'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/{LINUX_PKG_NAME}.svg')
+    if os.path.isfile('../res/scalable.svg'):
+        system2(
+            f'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/{LINUX_PKG_NAME}.svg')
     system2(
         f'cp ../res/{LINUX_PKG_NAME}.desktop tmpdeb/usr/share/applications/{LINUX_PKG_NAME}.desktop')
     system2(
