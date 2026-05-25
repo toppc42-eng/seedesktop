@@ -25,25 +25,32 @@ on:
       - 'build.py'
       - 'res/**'
       - 'Cargo.toml'
+      - 'build.rs'
+      - 'vcpkg.json'
       - '.github/workflows/macos-build.yml'
+      - '.github/workflows/bridge.yml'
 
 permissions:
   contents: read
 
 jobs:
+  generate-bridge:
+    uses: ./.github/workflows/bridge.yml
+
   build-macos:
+    needs: [generate-bridge]
     # Intel x86_64 binary (runs on Intel Macs / VMs). macos-14/arm64 produces arm64-only apps.
     # GitHub retired macos-13; macos-15-intel is the supported Intel image (see github.blog changelog).
     runs-on: macos-15-intel
     timeout-minutes: 120
     env:
-      # Must match vcpkg.json "baseline" / project CI (see .github/workflows/flutter-build.yml)
+      # Must match vcpkg.json "baseline" / bridge.yml / Cargo.toml rust-version.
       VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
       # Pin Flutter: latest stable breaks this tree (extended_text / theme APIs / google_fonts).
       FLUTTER_VERSION: "3.24.5"
-      # >= 1.81 for cpal/cidre; >= 1.85 for edition2024 deps (e.g. time-core in Cargo.lock).
-      RUST_VERSION: "1.85"
+      # Must match bridge.yml and Cargo.toml rust-version (time-core 0.1.8 needs >= 1.88).
+      RUST_VERSION: "1.88"
 
     steps:
       - name: Export GitHub Actions cache environment variables
@@ -57,6 +64,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}
+          submodules: recursive
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -88,18 +96,26 @@ jobs:
           sed -i '' -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' pubspec.yaml || sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' pubspec.yaml
           flutter pub get
 
-      # bridge_generated*.rs are gitignored; must match flutter_rust_bridge 1.80.1 (see src/bridge_generated.rs header).
-      - name: Install flutter_rust_bridge_codegen
-        run: cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid --locked
+      - name: Restore bridge artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-artifact
+          path: .
 
-      - name: Generate Flutter Rust bridge
+      - name: Verify bridge artifacts
         run: |
           set -euxo pipefail
-          "$HOME/.cargo/bin/flutter_rust_bridge_codegen" \
-            --rust-input ./src/flutter_ffi.rs \
-            --dart-output ./flutter/lib/generated_bridge.dart \
-            --c-output ./flutter/macos/Runner/bridge_generated.h
+          test -f src/bridge_generated.rs
+          test -f flutter/lib/generated_bridge.dart
+          test -f flutter/macos/Runner/bridge_generated.h
           cp ./flutter/macos/Runner/bridge_generated.h ./flutter/ios/Runner/bridge_generated.h
+          sed -i '' 's/ffi.NativeFunction<ffi.Bool Function(DartPort/ffi.NativeFunction<ffi.Uint8 Function(DartPort/g' \
+            flutter/lib/generated_bridge.dart || \
+          sed -i 's/ffi.NativeFunction<ffi.Bool Function(DartPort/ffi.NativeFunction<ffi.Uint8 Function(DartPort/g' \
+            flutter/lib/generated_bridge.dart
+
+      - name: Disable extra Rust lib targets (CI speed)
+        run: sed -i '' 's/\["cdylib", "staticlib", "rlib"\]/["cdylib"]/g' Cargo.toml || sed -i 's/\["cdylib", "staticlib", "rlib"\]/["cdylib"]/g' Cargo.toml
 
       # Upstream RustDesk mac CI: Homebrew tools + NASM 2.x + vcpkg (libyuv/libvpx/aom/opus/ffmpeg… via manifest).
       - name: Install build prerequisites (Homebrew)
