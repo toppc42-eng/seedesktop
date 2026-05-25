@@ -47,6 +47,7 @@ jobs:
             g++ \
             libclang-dev \
             libgtk-3-dev \
+            libunwind-dev \
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
             llvm-dev \
