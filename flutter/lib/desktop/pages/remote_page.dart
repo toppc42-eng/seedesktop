@@ -360,8 +360,6 @@ class _RemotePageState extends State<RemotePage>
     _freeSessionLimitTimer?.cancel();
     _freeSessionLimitTimer = null;
 
-    // https://github.com/flutter/flutter/issues/64935
-    super.dispose();
     debugPrint("REMOTE PAGE dispose session $sessionId ${widget.id}");
 
     // Defensive cleanup: ensure host system-key propagation is reset even if
@@ -373,7 +371,7 @@ class _RemotePageState extends State<RemotePage>
     // Clear callback reference to prevent memory leaks and stale references
     _ffi.inputModel.onRelativeMouseModeDisabled = null;
     // Relative mouse mode cleanup is centralized in FFI.close(closeSession: ...).
-    _ffi.textureModel.onRemotePageDispose(closeSession);
+    await _ffi.textureModel.onRemotePageDispose(closeSession);
     if (closeSession) {
       // ensure we leave this session, this is a double check
       _ffi.inputModel.enterOrLeave(false);
@@ -395,6 +393,10 @@ class _RemotePageState extends State<RemotePage>
       debugPrint(releaseError);
     }
     await _ffi.close(closeSession: closeSession);
+    if (closeSession && isDesktop) {
+      bind.sessionClosePeerSync(
+          id: widget.id, connType: ConnType.defaultConn.index);
+    }
     _ffi.dialogManager.dismissAll();
     if (closeSession) {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
@@ -410,6 +412,8 @@ class _RemotePageState extends State<RemotePage>
         peerName: crmPeerName,
       );
     }
+    // https://github.com/flutter/flutter/issues/64935 — call super after async teardown.
+    super.dispose();
   }
 
   void _handleCrmSessionClosed({

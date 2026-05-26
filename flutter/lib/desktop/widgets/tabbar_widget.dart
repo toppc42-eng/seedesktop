@@ -481,9 +481,7 @@ class _DesktopTabState extends State<DesktopTab>
       if (isLinux) {
         await hideDesktopSubWindow(kWindowId!);
       } else {
-        await windowController.hide();
-        await rustDeskWinManager
-            .call(WindowType.Main, kWindowEventHide, {"id": kWindowId!});
+        await closeDesktopSubWindow(kWindowId!);
       }
     }
 
@@ -865,8 +863,7 @@ class WindowActionPanelState extends State<WindowActionPanel> {
                         } else if (isLinux) {
                           await hideDesktopSubWindow(kWindowId!);
                         } else {
-                          await WindowController.fromWindowId(kWindowId!)
-                              .close();
+                          await closeDesktopSubWindow(kWindowId!);
                         }
                       });
                     }

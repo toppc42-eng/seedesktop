@@ -752,9 +752,39 @@ void closeConnection({String? id}) {
   }
 }
 
-/// Linux sub-windows: hide/close must run on the main engine (multi_window channel).
+/// Windows / macOS: close the native sub-window so Flutter runs [RemotePage.dispose]
+/// (texture teardown + Rust [sessionClose]) before the engine is torn down.
+Future<void> closeDesktopSubWindow(int windowId) async {
+  if (!isDesktop) return;
+  try {
+    final wc = WindowController.fromWindowId(windowId);
+    await wc.setPreventClose(false);
+    await wc.close();
+  } catch (e) {
+    debugPrint('closeDesktopSubWindow: $e');
+  }
+  rustDeskWinManager.releaseSubWindow(windowId);
+  try {
+    await rustDeskWinManager.unregisterActiveWindow(windowId);
+  } catch (e) {
+    try {
+      await rustDeskWinManager.call(
+          WindowType.Main, kWindowEventHide, {"id": windowId});
+    } catch (e2) {
+      debugPrint('closeDesktopSubWindow unregister: $e2');
+    }
+  }
+}
+
+/// Linux only: hide/close sub-windows on the main engine (multi_window channel).
+/// On other platforms use [closeDesktopSubWindow] instead.
 Future<void> hideDesktopSubWindow(int windowId) async {
   if (!isDesktop) return;
+  if (!isLinux) {
+    await closeDesktopSubWindow(windowId);
+    return;
+  }
+  if (windowId == kWindowMainId) return;
 
   Future<void> closeOnMainEngine() async {
     final wc = WindowController.fromWindowId(windowId);
@@ -789,42 +819,15 @@ Future<void> hideDesktopSubWindow(int windowId) async {
   }
 
   final onMainEngine = kWindowId == null || kWindowId == kWindowMainId;
-  if (isLinux && windowId != kWindowMainId) {
-    if (onMainEngine) {
-      await closeOnMainEngine();
-    } else {
-      try {
-        await rustDeskWinManager.call(
-            WindowType.Main, kWindowEventCloseSubWindow, {"id": windowId});
-      } catch (e) {
-        debugPrint('hideDesktopSubWindow via main: $e');
-      }
-    }
-    return;
-  }
-
-  final wc = WindowController.fromWindowId(windowId);
-  try {
-    await wc.hide();
-  } catch (e) {
-    debugPrint('hideDesktopSubWindow hide: $e');
-  }
-  try {
-    await rustDeskWinManager.unregisterActiveWindow(windowId);
-  } catch (e) {
+  if (onMainEngine) {
+    await closeOnMainEngine();
+  } else {
     try {
       await rustDeskWinManager.call(
-          WindowType.Main, kWindowEventHide, {"id": windowId});
-    } catch (e2) {
-      debugPrint('hideDesktopSubWindow unregister: $e2');
-    }
-  }
-  if (!isLinux) {
-    try {
-      await wc.setPreventClose(false);
-      await wc.close();
+          WindowType.Main, kWindowEventCloseSubWindow, {"id": windowId});
     } catch (e) {
-      debugPrint('hideDesktopSubWindow close: $e');
+      debugPrint('hideDesktopSubWindow via main: $e');
+      await closeOnMainEngine();
     }
   }
 }
@@ -2638,6 +2641,40 @@ connectMainDesktop(String id,
   }
 }
 
+int _connTypeIndexForConnect({
+  required bool isFileTransfer,
+  required bool isViewCamera,
+  required bool isTerminal,
+  required bool isTcpTunneling,
+  required bool isRDP,
+}) {
+  if (isFileTransfer) return ConnType.fileTransfer.index;
+  if (isViewCamera) return ConnType.viewCamera.index;
+  if (isTerminal) return ConnType.terminal.index;
+  if (isTcpTunneling || isRDP) {
+    return isRDP ? ConnType.rdp.index : ConnType.portForward.index;
+  }
+  return ConnType.defaultConn.index;
+}
+
+/// Rust can keep session handlers after the remote sub-window was closed; that
+/// blocks the next [sessionAddSync] / reconnect until app restart.
+Future<void> closeOrphanRustPeerSessionsIfNoLiveTab(
+  String peerId, {
+  required int connType,
+}) async {
+  if (!isDesktop) return;
+  final nk = normalizePeerIdForLicenseTracking(peerId);
+  final live = await rustDeskWinManager.collectLiveLicenseRelevantPeerIds();
+  if (live.contains(nk)) return;
+  if (bind.peerGetSessionsCount(id: peerId, connType: connType) == 0) return;
+  final closed = bind.sessionClosePeerSync(id: peerId, connType: connType);
+  if (kDebugMode && closed > 0) {
+    debugPrint(
+        '[connect] closed $closed orphan Rust session(s) for peer $peerId');
+  }
+}
+
 /// Release every active license session (server + local) and close all remote
 /// desktop windows. Used when an unlicensed / FREE user switches targets —
 /// they get one connection at a time, so the old one is torn down silently.
@@ -2685,11 +2722,22 @@ connect(BuildContext context, String id,
   final tier = await getLocalLicenseTier();
 
   if (isDesktop) {
+    await rustDeskWinManager.pruneStaleTrackedSubWindowIds();
     final livePeerIds =
         await rustDeskWinManager.collectLiveLicenseRelevantPeerIds();
     await pruneStaleLicenseSessionsBeforeConnect(
       livePeerIds,
       aggressiveWhenNoLiveUi: true,
+    );
+    await closeOrphanRustPeerSessionsIfNoLiveTab(
+      id,
+      connType: _connTypeIndexForConnect(
+        isFileTransfer: isFileTransfer,
+        isViewCamera: isViewCamera,
+        isTerminal: isTerminal,
+        isTcpTunneling: isTcpTunneling,
+        isRDP: isRDP,
+      ),
     );
   }
 

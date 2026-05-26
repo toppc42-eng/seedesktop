@@ -877,7 +877,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         await rustDeskWinManager.unregisterActiveWindow(call.arguments['id']);
       } else if (call.method == kWindowEventCloseSubWindow) {
         final id = call.arguments['id'] as int;
-        await hideDesktopSubWindow(id);
+        if (isLinux) {
+          await hideDesktopSubWindow(id);
+        } else {
+          await closeDesktopSubWindow(id);
+        }
       } else if (call.method == kWindowConnect) {
         await connectMainDesktop(
           call.arguments['id'],

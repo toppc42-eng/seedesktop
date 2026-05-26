@@ -182,6 +182,29 @@ class RustDeskMultiWindowManager {
     return windowId;
   }
 
+  /// Drop window ids that were closed/hidden but not removed from our lists (Windows).
+  Future<void> pruneStaleTrackedSubWindowIds() async {
+    if (!isDesktop) return;
+    List<int> live = [];
+    try {
+      live = await getAllSubWindowIds();
+    } catch (_) {
+      return;
+    }
+    final liveSet = live.toSet();
+    void prune(List<int> list) {
+      list.removeWhere((id) => !liveSet.contains(id));
+    }
+    prune(_remoteDesktopWindows);
+    prune(_fileTransferWindows);
+    prune(_viewCameraWindows);
+    prune(_portForwardWindows);
+    prune(_terminalWindows);
+    _activeWindows
+        .removeWhere((id) => id != kMainWindowId && !liveSet.contains(id));
+    _inactiveWindows.removeWhere((id) => !liveSet.contains(id));
+  }
+
   Future<MultiWindowCallResult> _newSession(
     bool openInTabs,
     WindowType type,
@@ -191,13 +214,23 @@ class RustDeskMultiWindowManager {
     String msg, {
     Rect? screenRect,
   }) async {
+    await pruneStaleTrackedSubWindowIds();
     if (openInTabs) {
       if (windows.isEmpty) {
         final windowId = await newSessionWindow(
             type, remoteId, msg, windows, screenRect != null);
         return MultiWindowCallResult(windowId, null);
       } else {
-        return call(type, methodName, msg);
+        try {
+          return await call(type, methodName, msg);
+        } catch (e) {
+          debugPrint(
+              '_newSession: invoke on stale window failed ($e), opening new window');
+          await pruneStaleTrackedSubWindowIds();
+          final windowId = await newSessionWindow(
+              type, remoteId, msg, windows, screenRect != null);
+          return MultiWindowCallResult(windowId, null);
+        }
       }
     } else {
       if (_inactiveWindows.isNotEmpty) {
@@ -279,6 +312,7 @@ class RustDeskMultiWindowManager {
     String? switchUuid,
     bool? forceRelay,
   }) async {
+    await pruneStaleTrackedSubWindowIds();
     return await newSession(
       WindowType.RemoteDesktop,
       kWindowEventNewRemoteDesktop,
@@ -501,13 +535,10 @@ class RustDeskMultiWindowManager {
         if (isLinux) {
           await hideDesktopSubWindow(wId);
         } else {
-          await WindowController.fromWindowId(wId).setPreventClose(false);
-          await WindowController.fromWindowId(wId).close();
+          await closeDesktopSubWindow(wId);
         }
       } catch (e) {
         debugPrint("close window $wId: $e");
-      } finally {
-        releaseSubWindow(wId);
       }
     }
     clearWindowType(type);

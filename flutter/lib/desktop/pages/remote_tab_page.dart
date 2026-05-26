@@ -371,31 +371,34 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
 
   void onRemoveId(String id) async {
     if (tabController.state.value.tabs.isEmpty) {
-      // Keep calling until the window status is hidden.
-      //
-      // Workaround for Windows/Linux:
-      // If you click other buttons and close in msgbox within a very short period of time, the close may fail.
-      Future<void> loopCloseWindow() async {
-        var c = 0;
-        final wid = windowId();
-        while (c < 20 && tabController.state.value.tabs.isEmpty) {
-          await hideDesktopSubWindow(wid);
-          if (!isLinux) {
-            break;
-          }
-          try {
-            if (await WindowController.fromWindowId(wid).isHidden()) {
+      final wid = windowId();
+      if (isLinux) {
+        // Linux: hide/close may need retries on the main engine.
+        Future<void> loopCloseWindow() async {
+          var c = 0;
+          while (c < 20 && tabController.state.value.tabs.isEmpty) {
+            await hideDesktopSubWindow(wid);
+            try {
+              if (await WindowController.fromWindowId(wid).isHidden()) {
+                break;
+              }
+            } catch (_) {
               break;
             }
-          } catch (_) {
-            break;
+            await Future.delayed(const Duration(milliseconds: 100));
+            c++;
           }
-          await Future.delayed(const Duration(milliseconds: 100));
-          c++;
         }
+        unawaited(loopCloseWindow());
+      } else {
+        // Windows/macOS: wait for the last tab dispose, then standard close().
+        unawaited(Future<void>(() async {
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (tabController.state.value.tabs.isEmpty) {
+            await closeDesktopSubWindow(wid);
+          }
+        }));
       }
-
-      unawaited(loopCloseWindow());
     }
     ConnectionTypeState.delete(id);
     // Clean up relative mouse mode state for this peer.
