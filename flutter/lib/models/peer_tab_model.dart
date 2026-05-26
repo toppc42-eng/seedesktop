@@ -62,8 +62,8 @@ class PeerTabModel with ChangeNotifier {
     !isWeb &&
         bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y", // LAN
     false, // health (legacy)
-    !bind.isDisableAccount(), // address book (account)
-    !bind.isDisableAccount(), // accessible devices / groups (account)
+    false, // address book (removed from product)
+    false, // accessible devices / groups (removed from product)
     isDesktopRmmHost, // my devices (RMM)
     isDesktopRmmHost, // script manager (RMM)
     isWindows, // local maintenance
@@ -139,6 +139,7 @@ class PeerTabModel with ChangeNotifier {
     // - Recent must be the default landing page.
     _ensureRecentIsFirstInOrder();
     _applyConnectClientOnlyTabVisibility();
+    _hideRemovedPeerTabs();
     _ensureLocalMaintenanceAfterLan();
     _ensureRecentVisible();
     _currentTab = PeerTabIndex.recent.index;
@@ -149,9 +150,9 @@ class PeerTabModel with ChangeNotifier {
   void _applyConnectClientOnlyTabVisibility() {
     if (!isDesktopConnectClientOnly) return;
     // Indices must match [PeerTabIndex] declaration order.
-    const hidden = <int>[4, 7, 8, 9, 10];
+    const hidden = <int>[4, 5, 6, 7, 8, 9, 10];
     // Restore tabs that older builds hid on Linux/macOS (saved in local options).
-    const ensureVisible = <int>[2, 3, 5, 6];
+    const ensureVisible = <int>[2, 3];
     for (final i in hidden) {
       if (i >= 0 && i < _isVisible.length) {
         _isVisible[i] = false;
@@ -166,6 +167,22 @@ class PeerTabModel with ChangeNotifier {
       bind.setLocalFlutterOption(
           k: kOptionPeerTabVisible, v: jsonEncode(_isVisible));
     } catch (_) {}
+  }
+
+  void _hideRemovedPeerTabs() {
+    for (final i in [PeerTabIndex.ab.index, PeerTabIndex.group.index]) {
+      if (i >= 0 && i < _isVisible.length) {
+        _isVisible[i] = false;
+      }
+    }
+    try {
+      bind.setLocalFlutterOption(
+          k: kOptionPeerTabVisible, v: jsonEncode(_isVisible));
+    } catch (_) {}
+    if (_currentTab == PeerTabIndex.ab.index ||
+        _currentTab == PeerTabIndex.group.index) {
+      _trySetCurrentTabToFirstVisibleEnabled();
+    }
   }
 
   /// Keeps the local maintenance tab immediately after "Discovered" in the top bar order.

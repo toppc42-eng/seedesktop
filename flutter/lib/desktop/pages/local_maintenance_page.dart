@@ -25,10 +25,7 @@ import 'package:flutter_hbb/utils/multi_window_manager.dart'
     show rustDeskWinManager;
 import 'package:flutter_hbb/utils/seedesktop_cleanup_launcher.dart';
 import 'package:flutter_hbb/utils/extapps_launcher.dart'
-    show ExternalItTool,
-        kExternalItTools,
-        launchExternalItTool,
-        secretFolderItToolsForPlatform;
+    show ExternalItTool, kExternalItTools, launchExternalItTool;
 import 'package:flutter_hbb/common/widgets/rmm_pro_gate_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -2027,7 +2024,6 @@ class _LocalMaintenancePageState extends State<LocalMaintenancePage> {
                               unawaited(_openLocalSystemTerminal()),
                         ),
                         if (!kIsWeb && isWindows) ...[
-                          ..._windowsSecretFolderSidebarWidgets(context),
                           const SizedBox(height: 14),
                           Text(
                             translate('lm-external-tools-section'),
@@ -2194,30 +2190,6 @@ class _LocalMaintenancePageState extends State<LocalMaintenancePage> {
           ? Opacity(opacity: 0.72, child: btn)
           : btn,
     );
-  }
-
-  /// Windows-only sidebar block: «תיקיות סודיות» (e.g. FolderHide.exe).
-  List<Widget> _windowsSecretFolderSidebarWidgets(BuildContext context) {
-    final tools = secretFolderItToolsForPlatform();
-    if (tools.isEmpty) return const [];
-    return [
-      const SizedBox(height: 14),
-      Text(
-        translate('lm-secret-folders-section'),
-        textAlign: TextAlign.right,
-        style: TextStyle(
-          fontSize: _lmActionInnerSize(11),
-          fontWeight: FontWeight.w800,
-          color: kLocalMaintenanceCopper,
-          letterSpacing: 0.2,
-        ),
-      ),
-      const SizedBox(height: 8),
-      for (var i = 0; i < tools.length; i++) ...[
-        _sidebarExternalToolButton(context, tool: tools[i]),
-        if (i < tools.length - 1) const SizedBox(height: 8),
-      ],
-    ];
   }
 
   /// External IT apps from `tools\extapps\` — short name + info icon (Hebrew tooltip only on icon).
