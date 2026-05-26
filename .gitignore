@@ -20,6 +20,7 @@ src/version.rs
 cert.pfx
 *.bak
 *png
+!res/mac-tray-dark-x2.png
 *svg
 !res/scalable.svg
 *jpg
