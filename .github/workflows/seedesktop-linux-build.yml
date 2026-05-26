@@ -2,21 +2,7 @@
 name: SeeDesktop Linux Build
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'flutter/**'
-      - 'libs/**'
-      - 'build.py'
-      - 'res/**'
-      - 'Cargo.toml'
-      - 'vcpkg.json'
-      - 'scripts/build_linux.sh'
-      - '.github/workflows/seedesktop-linux-build.yml'
-      - '.github/workflows/bridge.yml'
+  workflow_dispatch: # הגדרה זו מאפשרת הפעלה ידנית בלבד דרך האתר של גיטהאב
 
 env:
   FLUTTER_VERSION: "3.22.3"
