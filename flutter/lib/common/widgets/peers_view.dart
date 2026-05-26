@@ -455,6 +455,7 @@ class _PeersViewState extends State<_PeersView>
       );
     }
 
+    // Recent: order comes from Rust (last connection time). Do not re-sort here.
     if (widget.peers.loadEvent != LoadEvent.recent) {
       switch (sortedBy) {
         case PeerSortType.remoteId:

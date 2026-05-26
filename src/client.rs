@@ -2583,8 +2583,9 @@ impl LoginConfigHandler {
                 config.keyboard_mode = KeyboardMode::Legacy.to_string();
             }
         }
-        // no matter if change, for update file time
         self.save_config(config);
+        // Recent tab order follows last successful connection, not incidental config writes.
+        PeerConfig::bump_recent_order(&self.id);
         self.supported_encoding = pi.encoding.clone().unwrap_or_default();
         log::info!("peer info supported_encoding:{:?}", self.supported_encoding);
     }

@@ -1491,7 +1491,31 @@ impl PeerConfig {
         self.store_(id);
     }
 
+    /// Move this peer to the front of the Recent list (most recent connection first).
+    pub fn bump_recent_order(id: &str) {
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            use filetime::{set_file_mtime, FileTime};
+            let path = Self::path(id);
+            if path.is_file() {
+                let secs = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .map(|d| d.as_secs() as i64)
+                    .unwrap_or(0);
+                let _ = set_file_mtime(&path, FileTime::from_unix_time(secs, 0));
+            }
+        }
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            let _ = id;
+        }
+    }
+
     fn store_(&self, id: &str) {
+        let path = Self::path(id);
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        let preserve_mtime = path.is_file().then(|| crate::get_modified_time(&path));
+
         let mut config = self.clone();
         config.password =
             encrypt_vec_or_original(&config.password, PASSWORD_ENC_VERSION, ENCRYPT_MAX_LEN);
@@ -1500,8 +1524,19 @@ impl PeerConfig {
                 *v = encrypt_str_or_original(v, PASSWORD_ENC_VERSION, ENCRYPT_MAX_LEN)
             }
         }
-        if let Err(err) = store_path(Self::path(id), config) {
+        if let Err(err) = store_path(path.clone(), config) {
             log::error!("Failed to store config: {}", err);
+        } else {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            if let Some(t) = preserve_mtime {
+                if let Ok(d) = t.duration_since(SystemTime::UNIX_EPOCH) {
+                    use filetime::{set_file_mtime, FileTime};
+                    let _ = set_file_mtime(
+                        &path,
+                        FileTime::from_unix_time(d.as_secs() as i64, d.subsec_nanos()),
+                    );
+                }
+            }
         }
         NEW_STORED_PEER_CONFIG.lock().unwrap().insert(id.to_owned());
     }
