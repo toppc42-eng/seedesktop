@@ -2106,6 +2106,31 @@ Future<ActiveSessionsResult> fetchActiveSessionsFromPrefs() async {
   return fetchActiveSessions(license);
 }
 
+/// Called before opening a new remote session. Unlike [pruneStaleLicensePeerSessionsNotLive]
+/// (settings / refresh), this may treat an empty [liveNormalizedPeerIds] as "no live UI"
+/// when [aggressiveWhenNoLiveUi] is true — e.g. after the user closed all remote tabs on
+/// Windows but SharedPreferences still hold a seat (blocks reconnect until app restart).
+Future<void> pruneStaleLicenseSessionsBeforeConnect(
+  Set<String> liveNormalizedPeerIds, {
+  bool aggressiveWhenNoLiveUi = false,
+}) async {
+  final map = await _loadPeerSessionMap();
+  if (liveNormalizedPeerIds.isEmpty) {
+    if (!aggressiveWhenNoLiveUi) {
+      await _cleanupPendingNotInLive(liveNormalizedPeerIds);
+      return;
+    }
+    for (final key in map.keys.toList()) {
+      if (map[key]?.isNotEmpty ?? false) {
+        await releaseConnectionForPeer(key);
+      }
+    }
+    await _savePendingPeerMap({});
+    return;
+  }
+  await pruneStaleLicensePeerSessionsNotLive(liveNormalizedPeerIds);
+}
+
 /// Remove license map entries (and notify VPS) for peers that have no live UI session.
 /// Desktop only: pass the set of normalized peer ids from open remote-related windows.
 Future<void> pruneStaleLicensePeerSessionsNotLive(

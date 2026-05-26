@@ -2684,6 +2684,15 @@ connect(BuildContext context, String id,
   final savedLicense = await getSavedLicenseKey();
   final tier = await getLocalLicenseTier();
 
+  if (isDesktop) {
+    final livePeerIds =
+        await rustDeskWinManager.collectLiveLicenseRelevantPeerIds();
+    await pruneStaleLicenseSessionsBeforeConnect(
+      livePeerIds,
+      aggressiveWhenNoLiveUi: true,
+    );
+  }
+
   // File transfer is a PRO-only feature.
   if (isFileTransfer && tier != LocalLicenseTier.proActive) {
     if (context.mounted) {
@@ -2713,7 +2722,10 @@ connect(BuildContext context, String id,
 
   // FREE and fully unlicensed: single active remote at a time; PRO may use multiple.
   // If already connected to a different peer, confirm before disconnecting the old session.
-  if (tier != LocalLicenseTier.proActive) {
+  final trackFreeTierPending = tier != LocalLicenseTier.proActive;
+  var licenseSessionStartedForPeer = false;
+  try {
+  if (trackFreeTierPending) {
     if (await hasActiveLicenseSessionToOtherPeer(id)) {
       final otherPeerId = await getFirstOtherActivePeerId(id);
       if (otherPeerId != null && context.mounted) {
@@ -2737,7 +2749,7 @@ connect(BuildContext context, String id,
       peerId: id,
     );
     if (!sessionResult.approved) {
-      if (tier != LocalLicenseTier.proActive) {
+      if (trackFreeTierPending) {
         await unmarkPendingLicenseConnectionPeer(id);
       }
       if (sessionResult.limitReached) {
@@ -2782,6 +2794,7 @@ connect(BuildContext context, String id,
       }
       return;
     }
+    licenseSessionStartedForPeer = true;
   }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
@@ -2924,6 +2937,17 @@ connect(BuildContext context, String id,
       }
     }
     stateGlobal.isInMainPage = false;
+  }
+  } catch (e, st) {
+    if (licenseSessionStartedForPeer) {
+      await releaseConnectionForPeer(id);
+    }
+    debugPrint('connect($id) failed: $e\n$st');
+    rethrow;
+  } finally {
+    if (trackFreeTierPending) {
+      await unmarkPendingLicenseConnectionPeer(id);
+    }
   }
 
   FocusScopeNode currentFocus = FocusScope.of(context);

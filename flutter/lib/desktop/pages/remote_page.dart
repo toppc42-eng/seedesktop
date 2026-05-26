@@ -383,14 +383,16 @@ class _RemotePageState extends State<RemotePage>
     _ffi.imageModel.disposeImage();
     _ffi.cursorModel.disposeImages();
     _rawKeyFocusNode.dispose();
-    if (closeSession) {
-      final releaseError = await releaseConnectionForPeer(
-        widget.id,
-        sessionIdHint: sessionId.toString(),
-      );
-      if (releaseError != null) {
-        debugPrint(releaseError);
-      }
+    // Always release the license seat (idempotent). closeSessionOnDispose=false is used
+    // when the network session was already torn down (e.g. tab→window); release may have
+    // run in _disconnectNetworkImmediately, but skipping here left ghost seats and
+    // blocked reconnect on Windows until app restart.
+    final releaseError = await releaseConnectionForPeer(
+      widget.id,
+      sessionIdHint: sessionId.toString(),
+    );
+    if (releaseError != null) {
+      debugPrint(releaseError);
     }
     await _ffi.close(closeSession: closeSession);
     _ffi.dialogManager.dismissAll();
