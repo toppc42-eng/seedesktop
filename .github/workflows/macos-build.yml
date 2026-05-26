@@ -116,7 +116,8 @@ jobs:
             flutter/lib/generated_bridge.dart
 
       - name: Disable extra Rust lib targets (CI speed)
-        run: sed -i '' 's/\["cdylib", "staticlib", "rlib"\]/["cdylib"]/g' Cargo.toml || sed -i 's/\["cdylib", "staticlib", "rlib"\]/["cdylib"]/g' Cargo.toml
+        # Keep rlib so the `service` bin can `use librustdesk::*` (cdylib alone is not enough).
+        run: sed -i '' 's/\["cdylib", "staticlib", "rlib"\]/["cdylib", "rlib"]/g' Cargo.toml || sed -i 's/\["cdylib", "staticlib", "rlib"\]/["cdylib", "rlib"]/g' Cargo.toml
 
       # Upstream RustDesk mac CI: Homebrew tools + NASM 2.x + vcpkg (libyuv/libvpx/aom/opus/ffmpeg… via manifest).
       - name: Install build prerequisites (Homebrew)
