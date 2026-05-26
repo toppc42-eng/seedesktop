@@ -76,8 +76,6 @@ fn install_android_deps() {
 }
 
 fn main() {
-    // objc 0.2 macros use cfg(cargo-clippy); declare for Rust 1.80+ check-cfg.
-    println!("cargo::rustc-check-cfg=cfg(cargo-clippy)");
     hbb_common::gen_version();
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
     install_android_deps();

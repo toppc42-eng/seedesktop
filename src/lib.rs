@@ -1,3 +1,6 @@
+// objc 0.2 `sel!` expands cfg(feature) / cfg(cargo-clippy) in this crate (Rust 1.80+ check-cfg).
+#![allow(unexpected_cfgs)]
+
 mod keyboard;
 /// cbindgen:ignore
 pub mod platform;
