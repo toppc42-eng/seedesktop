@@ -2099,6 +2099,26 @@ pub mod sessions {
         SESSIONS.read().unwrap().get(&(peer_id, conn_type)).cloned()
     }
 
+    /// Session ids for a peer connection (used to close orphan UI sessions on reconnect).
+    #[inline]
+    pub fn session_ids_for_peer(peer_id: String, conn_type: ConnType) -> Vec<SessionID> {
+        SESSIONS
+            .read()
+            .unwrap()
+            .get(&(peer_id, conn_type))
+            .map(|session| {
+                session
+                    .ui_handler
+                    .session_handlers
+                    .read()
+                    .unwrap()
+                    .keys()
+                    .cloned()
+                    .collect::<Vec<SessionID>>()
+            })
+            .unwrap_or_default()
+    }
+
     #[inline]
     pub fn remove_session_by_session_id(id: &SessionID) -> Option<FlutterSession> {
         let mut remove_peer_key = None;

@@ -131,17 +131,7 @@ pub fn session_close_peer_sync(id: String, conn_type: i32) -> SyncReturn<usize> 
     let conn_type = conn_type_from_i32(conn_type);
     let mut closed = 0usize;
     loop {
-        let Some(session) = sessions::get_session_by_peer_id(id.clone(), conn_type) else {
-            break;
-        };
-        let ids: Vec<SessionID> = session
-            .ui_handler
-            .session_handlers
-            .read()
-            .unwrap()
-            .keys()
-            .cloned()
-            .collect();
+        let ids = sessions::session_ids_for_peer(id.clone(), conn_type);
         if ids.is_empty() {
             break;
         }
