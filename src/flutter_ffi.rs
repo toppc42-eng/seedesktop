@@ -105,7 +105,12 @@ pub fn host_stop_system_key_propagate(_stopped: bool) {
 
 // This function is only used to count the number of control sessions.
 pub fn peer_get_sessions_count(id: String, conn_type: i32) -> SyncReturn<usize> {
-    let conn_type = if conn_type == ConnType::VIEW_CAMERA as i32 {
+    let conn_type = conn_type_from_i32(conn_type);
+    SyncReturn(sessions::get_session_count(id, conn_type))
+}
+
+fn conn_type_from_i32(conn_type: i32) -> ConnType {
+    if conn_type == ConnType::VIEW_CAMERA as i32 {
         ConnType::VIEW_CAMERA
     } else if conn_type == ConnType::FILE_TRANSFER as i32 {
         ConnType::FILE_TRANSFER
@@ -117,8 +122,35 @@ pub fn peer_get_sessions_count(id: String, conn_type: i32) -> SyncReturn<usize> 
         ConnType::TERMINAL
     } else {
         ConnType::DEFAULT_CONN
-    };
-    SyncReturn(sessions::get_session_count(id, conn_type))
+    }
+}
+
+/// Close every Flutter UI session for [id] + [conn_type]. Used when the remote
+/// window was torn down but Rust still holds handlers (blocks reconnect on Windows).
+pub fn session_close_peer_sync(id: String, conn_type: i32) -> SyncReturn<usize> {
+    let conn_type = conn_type_from_i32(conn_type);
+    let mut closed = 0usize;
+    loop {
+        let Some(session) = sessions::get_session_by_peer_id(id.clone(), conn_type) else {
+            break;
+        };
+        let ids: Vec<SessionID> = session
+            .ui_handler
+            .session_handlers
+            .read()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect();
+        if ids.is_empty() {
+            break;
+        }
+        for sid in ids {
+            session_close(sid);
+            closed += 1;
+        }
+    }
+    SyncReturn(closed)
 }
 
 pub fn session_add_existed_sync(

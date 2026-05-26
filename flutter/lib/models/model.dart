@@ -3893,8 +3893,7 @@ class FFI {
     // If tabWindowId != null, this session is a "tab -> window" one.
     // Else this session is a new one.
     if (isNewPeer) {
-      // ignore: unused_local_variable
-      final addRes = bind.sessionAddSync(
+      var addRes = bind.sessionAddSync(
         sessionId: sessionId,
         id: id,
         isFileTransfer: isFileTransfer,
@@ -3908,6 +3907,27 @@ class FFI {
         isSharedPassword: isSharedPassword ?? false,
         connToken: connToken,
       );
+      if (addRes.isNotEmpty && isDesktop) {
+        debugPrint('sessionAddSync failed for $id: $addRes — closing orphan handlers');
+        bind.sessionClosePeerSync(id: id, connType: connType.index);
+        addRes = bind.sessionAddSync(
+          sessionId: sessionId,
+          id: id,
+          isFileTransfer: isFileTransfer,
+          isViewCamera: isViewCamera,
+          isPortForward: isPortForward,
+          isRdp: isRdp,
+          isTerminal: isTerminal,
+          switchUuid: switchUuid ?? '',
+          forceRelay: forceRelay ?? false,
+          password: password ?? '',
+          isSharedPassword: isSharedPassword ?? false,
+          connToken: connToken,
+        );
+        if (addRes.isNotEmpty) {
+          debugPrint('sessionAddSync retry failed for $id: $addRes');
+        }
+      }
     } else if (display != null) {
       if (displays == null) {
         debugPrint(

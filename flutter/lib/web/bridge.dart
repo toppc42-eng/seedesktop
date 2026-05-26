@@ -64,6 +64,11 @@ class RustdeskImpl {
     return 0;
   }
 
+  int sessionClosePeerSync(
+      {required String id, required int connType, dynamic hint}) {
+    return 0;
+  }
+
   String sessionAddExistedSync(
       {required String id,
       required UuidValue sessionId,
